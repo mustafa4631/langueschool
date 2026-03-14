@@ -21,21 +21,14 @@ import { useUploadImageMutation } from "@/lib/features/blog/blogApi";
 const createDigitalProductSchema = z.object({
     name: z.string().min(3, "İsim en az 3 karakter olmalı"),
     description: z.string().min(10, "Açıklama yetersiz"),
-    price: z.coerce.number().positive("Geçerli bir fiyat giriniz"),
-    discounted_price: z.preprocess(
-        (value) => {
-            if (value === "" || value === null || value === undefined) return null;
-            return Number(value);
-        },
-        z.number().nonnegative("İndirimli fiyat negatif olamaz").nullable()
-    ),
-    stock: z.coerce.number().int("Stok tam sayı olmalı").min(0, "Stok 0'dan küçük olamaz").default(100),
+    price: z.number().positive("Geçerli bir fiyat giriniz"),
+    discounted_price: z.number().nonnegative("İndirimli fiyat negatif olamaz").nullable(),
+    stock: z.number().int("Stok tam sayı olmalı").min(0, "Stok 0'dan küçük olamaz"),
     external_link: z.string().url("Geçerli bir URL giriniz"),
-    download_limit: z.coerce.number().int("İndirme limiti tam sayı olmalı").min(1, "En az 1 olmalı").default(10),
+    download_limit: z.number().int("İndirme limiti tam sayı olmalı").min(0, "En az 0 olmalı"),
 });
 
-type CreateDigitalProductFormInput = z.input<typeof createDigitalProductSchema>;
-type CreateDigitalProductFormValues = z.output<typeof createDigitalProductSchema>;
+type CreateDigitalProductFormValues = z.infer<typeof createDigitalProductSchema>;
 
 type UploadedDigitalImage = {
     digital_product_image_url: string;
@@ -43,33 +36,38 @@ type UploadedDigitalImage = {
     order: number;
 };
 
-const getErrorMessages = (errorData: unknown): string[] => {
+type NestedErrorData = string | string[] | { [key: string]: NestedErrorData };
+
+type MutationErrorPayload = {
+    status?: string | number;
+    originalStatus?: number;
+    data?: NestedErrorData;
+};
+
+type SuccessPayload = {
+    message?: string;
+    data?: {
+        message?: string;
+    };
+};
+
+const getErrorMessages = (errorData: NestedErrorData | null | undefined): string[] => {
     if (!errorData) return [];
     if (typeof errorData === "string") return [errorData];
     if (Array.isArray(errorData)) {
         return errorData.flatMap((item) => getErrorMessages(item));
     }
-    if (typeof errorData === "object") {
-        return Object.values(errorData as Record<string, unknown>).flatMap((item) => getErrorMessages(item));
-    }
-    return [];
+    return Object.values(errorData).flatMap((item) => getErrorMessages(item));
 };
 
-const getSuccessMessage = (data: unknown): string | undefined => {
-    if (!data || typeof data !== "object") return undefined;
-
-    const asRecord = data as Record<string, unknown>;
-    if (typeof asRecord.message === "string" && asRecord.message.trim()) {
-        return asRecord.message;
+const getSuccessMessage = (data: SuccessPayload | undefined): string | undefined => {
+    if (!data) return undefined;
+    if (typeof data.message === "string" && data.message.trim()) {
+        return data.message;
     }
-
-    if (asRecord.data && typeof asRecord.data === "object") {
-        const nested = asRecord.data as Record<string, unknown>;
-        if (typeof nested.message === "string" && nested.message.trim()) {
-            return nested.message;
-        }
+    if (typeof data.data?.message === "string" && data.data.message.trim()) {
+        return data.data.message;
     }
-
     return undefined;
 };
 
@@ -85,16 +83,16 @@ export default function CreateDigitalProductPage() {
         register,
         handleSubmit,
         formState: { errors },
-    } = useForm<CreateDigitalProductFormInput, unknown, CreateDigitalProductFormValues>({
+    } = useForm<CreateDigitalProductFormValues>({
         resolver: zodResolver(createDigitalProductSchema),
         defaultValues: {
             name: "",
             description: "",
             price: 0,
             discounted_price: null,
-            stock: 100,
+            stock: 0,
             external_link: "",
-            download_limit: 10,
+            download_limit: 0,
         },
     });
 
@@ -149,10 +147,10 @@ export default function CreateDigitalProductPage() {
                     },
                 ]);
                 toast.success(`${file.name} başarıyla yüklendi.`);
-            } catch (error: unknown) {
+            } catch (error) {
                 const errorData =
                     error && typeof error === "object" && "data" in error
-                        ? (error as { data?: unknown }).data
+                        ? (error as { data?: NestedErrorData }).data
                         : undefined;
                 const backendMessages = getErrorMessages(errorData);
                 toast.error(backendMessages[0] || `${file.name} yüklenirken bir hata oluştu.`);
@@ -180,11 +178,7 @@ export default function CreateDigitalProductPage() {
             const result = await createDigitalProduct(payload);
 
             if ("error" in result) {
-                const errorPayload = result.error as {
-                    status?: unknown;
-                    originalStatus?: unknown;
-                    data?: unknown;
-                };
+                const errorPayload = result.error as MutationErrorPayload;
                 const isCreatedWithParsingIssue =
                     errorPayload?.status === "PARSING_ERROR" &&
                     Number(errorPayload?.originalStatus) === 201;
@@ -200,7 +194,7 @@ export default function CreateDigitalProductPage() {
                 return;
             }
 
-            const successMessage = getSuccessMessage(result.data) || "Dijital ürün başarıyla oluşturuldu.";
+            const successMessage = getSuccessMessage(result.data as SuccessPayload) || "Dijital ürün başarıyla oluşturuldu.";
             toast.success(successMessage);
             router.push("/dashboard/digital-products");
         } catch {
@@ -275,7 +269,7 @@ export default function CreateDigitalProductPage() {
                                             step="0.01"
                                             placeholder="Örn: 299.90"
                                             className={`bg-slate-50 border-slate-200 focus-visible:ring-[#1A3EB1] ${errors.price ? "border-red-500" : ""}`}
-                                            {...register("price")}
+                                            {...register("price", { valueAsNumber: true })}
                                         />
                                         {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price.message}</p>}
                                     </div>
@@ -287,7 +281,12 @@ export default function CreateDigitalProductPage() {
                                             step="0.01"
                                             placeholder="Örn: 199.90"
                                             className={`bg-slate-50 border-slate-200 focus-visible:ring-[#1A3EB1] ${errors.discounted_price ? "border-red-500" : ""}`}
-                                            {...register("discounted_price")}
+                                            {...register("discounted_price", {
+                                                setValueAs: (value: string | number | null | undefined) => {
+                                                    if (value === "" || value === null || value === undefined) return null;
+                                                    return Number(value);
+                                                },
+                                            })}
                                         />
                                         {errors.discounted_price && (
                                             <p className="text-red-500 text-xs mt-1">{errors.discounted_price.message}</p>
@@ -302,7 +301,7 @@ export default function CreateDigitalProductPage() {
                                             type="number"
                                             placeholder="Örn: 100"
                                             className={`bg-slate-50 border-slate-200 focus-visible:ring-[#1A3EB1] ${errors.stock ? "border-red-500" : ""}`}
-                                            {...register("stock")}
+                                            {...register("stock", { valueAsNumber: true })}
                                         />
                                         {errors.stock && <p className="text-red-500 text-xs mt-1">{errors.stock.message}</p>}
                                     </div>
@@ -313,7 +312,7 @@ export default function CreateDigitalProductPage() {
                                             type="number"
                                             placeholder="Örn: 10"
                                             className={`bg-slate-50 border-slate-200 focus-visible:ring-[#1A3EB1] ${errors.download_limit ? "border-red-500" : ""}`}
-                                            {...register("download_limit")}
+                                            {...register("download_limit", { valueAsNumber: true })}
                                         />
                                         {errors.download_limit && (
                                             <p className="text-red-500 text-xs mt-1">{errors.download_limit.message}</p>
