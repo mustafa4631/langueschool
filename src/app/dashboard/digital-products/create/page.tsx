@@ -34,7 +34,8 @@ const createDigitalProductSchema = z.object({
     download_limit: z.coerce.number().int("İndirme limiti tam sayı olmalı").min(1, "En az 1 olmalı").default(10),
 });
 
-type CreateDigitalProductFormValues = z.infer<typeof createDigitalProductSchema>;
+type CreateDigitalProductFormInput = z.input<typeof createDigitalProductSchema>;
+type CreateDigitalProductFormValues = z.output<typeof createDigitalProductSchema>;
 
 type UploadedDigitalImage = {
     digital_product_image_url: string;
@@ -54,6 +55,24 @@ const getErrorMessages = (errorData: unknown): string[] => {
     return [];
 };
 
+const getSuccessMessage = (data: unknown): string | undefined => {
+    if (!data || typeof data !== "object") return undefined;
+
+    const asRecord = data as Record<string, unknown>;
+    if (typeof asRecord.message === "string" && asRecord.message.trim()) {
+        return asRecord.message;
+    }
+
+    if (asRecord.data && typeof asRecord.data === "object") {
+        const nested = asRecord.data as Record<string, unknown>;
+        if (typeof nested.message === "string" && nested.message.trim()) {
+            return nested.message;
+        }
+    }
+
+    return undefined;
+};
+
 export default function CreateDigitalProductPage() {
     const router = useRouter();
     const { isAuthorized, profile, isLoading: isAuthLoading } = useAuthGuard("admin");
@@ -65,9 +84,8 @@ export default function CreateDigitalProductPage() {
     const {
         register,
         handleSubmit,
-        control,
         formState: { errors },
-    } = useForm<CreateDigitalProductFormValues>({
+    } = useForm<CreateDigitalProductFormInput, unknown, CreateDigitalProductFormValues>({
         resolver: zodResolver(createDigitalProductSchema),
         defaultValues: {
             name: "",
@@ -131,8 +149,12 @@ export default function CreateDigitalProductPage() {
                     },
                 ]);
                 toast.success(`${file.name} başarıyla yüklendi.`);
-            } catch (error: any) {
-                const backendMessages = getErrorMessages(error?.data);
+            } catch (error: unknown) {
+                const errorData =
+                    error && typeof error === "object" && "data" in error
+                        ? (error as { data?: unknown }).data
+                        : undefined;
+                const backendMessages = getErrorMessages(errorData);
                 toast.error(backendMessages[0] || `${file.name} yüklenirken bir hata oluştu.`);
             }
         }
@@ -158,7 +180,11 @@ export default function CreateDigitalProductPage() {
             const result = await createDigitalProduct(payload);
 
             if ("error" in result) {
-                const errorPayload: any = result.error;
+                const errorPayload = result.error as {
+                    status?: unknown;
+                    originalStatus?: unknown;
+                    data?: unknown;
+                };
                 const isCreatedWithParsingIssue =
                     errorPayload?.status === "PARSING_ERROR" &&
                     Number(errorPayload?.originalStatus) === 201;
@@ -174,10 +200,7 @@ export default function CreateDigitalProductPage() {
                 return;
             }
 
-            const successMessage =
-                result.data?.data?.message ||
-                result.data?.message ||
-                "Dijital ürün başarıyla oluşturuldu.";
+            const successMessage = getSuccessMessage(result.data) || "Dijital ürün başarıyla oluşturuldu.";
             toast.success(successMessage);
             router.push("/dashboard/digital-products");
         } catch {

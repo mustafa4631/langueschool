@@ -37,7 +37,8 @@ const editDigitalProductSchema = z.object({
     download_limit: z.coerce.number().int("İndirme limiti tam sayı olmalı").min(1, "En az 1 olmalı").default(10),
 });
 
-type EditDigitalProductFormValues = z.infer<typeof editDigitalProductSchema>;
+type EditDigitalProductFormInput = z.input<typeof editDigitalProductSchema>;
+type EditDigitalProductFormValues = z.output<typeof editDigitalProductSchema>;
 
 type ExistingImage = {
     id: number;
@@ -57,6 +58,31 @@ const getErrorMessages = (errorData: unknown): string[] => {
         return Object.values(errorData as Record<string, unknown>).flatMap((item) => getErrorMessages(item));
     }
     return [];
+};
+
+const getSuccessMessage = (data: unknown): string | undefined => {
+    if (!data || typeof data !== "object") return undefined;
+
+    const asRecord = data as Record<string, unknown>;
+    if (typeof asRecord.message === "string" && asRecord.message.trim()) {
+        return asRecord.message;
+    }
+
+    if (asRecord.data && typeof asRecord.data === "object") {
+        const nested = asRecord.data as Record<string, unknown>;
+        if (typeof nested.message === "string" && nested.message.trim()) {
+            return nested.message;
+        }
+    }
+
+    if (asRecord.res && typeof asRecord.res === "object") {
+        const nested = asRecord.res as Record<string, unknown>;
+        if (typeof nested.message === "string" && nested.message.trim()) {
+            return nested.message;
+        }
+    }
+
+    return undefined;
 };
 
 export default function EditDigitalProductPage({ params }: { params: Promise<{ id: string }> }) {
@@ -83,7 +109,7 @@ export default function EditDigitalProductPage({ params }: { params: Promise<{ i
         handleSubmit,
         reset,
         formState: { errors },
-    } = useForm<EditDigitalProductFormValues>({
+    } = useForm<EditDigitalProductFormInput, unknown, EditDigitalProductFormValues>({
         resolver: zodResolver(editDigitalProductSchema),
         defaultValues: {
             name: "",
@@ -179,8 +205,12 @@ export default function EditDigitalProductPage({ params }: { params: Promise<{ i
                     },
                 ]);
                 toast.success(`${file.name} başarıyla yüklendi.`);
-            } catch (error: any) {
-                const backendMessages = getErrorMessages(error?.data);
+            } catch (error: unknown) {
+                const errorData =
+                    error && typeof error === "object" && "data" in error
+                        ? (error as { data?: unknown }).data
+                        : undefined;
+                const backendMessages = getErrorMessages(errorData);
                 toast.error(backendMessages[0] || `${file.name} yüklenirken bir hata oluştu.`);
             }
         }
@@ -206,7 +236,11 @@ export default function EditDigitalProductPage({ params }: { params: Promise<{ i
             const result = await updateDigitalProduct({ id: Number(id), body: payload });
 
             if ("error" in result) {
-                const errorPayload: any = result.error;
+                const errorPayload = result.error as {
+                    status?: unknown;
+                    originalStatus?: unknown;
+                    data?: unknown;
+                };
                 const isSuccessWithParsingIssue =
                     errorPayload?.status === "PARSING_ERROR" &&
                     [200, 201].includes(Number(errorPayload?.originalStatus));
@@ -222,11 +256,7 @@ export default function EditDigitalProductPage({ params }: { params: Promise<{ i
                 return;
             }
 
-            const successMessage =
-                result.data?.message ||
-                result.data?.data?.message ||
-                (result.data as any)?.res?.message ||
-                "Dijital ürün başarıyla güncellendi.";
+            const successMessage = getSuccessMessage(result.data) || "Dijital ürün başarıyla güncellendi.";
             toast.success(successMessage);
             router.push("/dashboard/digital-products");
         } catch {
