@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 
-const bilgiAlSchema = z.object({
+const infoRequestSchema = z.object({
     name: z.string().min(2, "Ad Soyad gereklidir"),
     phone: z.string().min(10, "Geçerli bir telefon numarası giriniz"),
     is_whatsapp: z.boolean().default(false),
@@ -23,9 +23,10 @@ const bilgiAlSchema = z.object({
     message: z.string().min(10, "Mesajınız en az 10 karakter olmalıdır"),
 });
 
-type BilgiAlFormValues = z.infer<typeof bilgiAlSchema>;
+type InfoRequestFormInput = z.input<typeof infoRequestSchema>;
+type InfoRequestFormValues = z.output<typeof infoRequestSchema>;
 
-const priorityItems: Array<{ label: string; value: BilgiAlFormValues["priority"] }> = [
+const priorityOptions: Array<{ label: string; value: InfoRequestFormValues["priority"] }> = [
     { label: "Düşük", value: "low" },
     { label: "Normal", value: "normal" },
     { label: "Yüksek", value: "high" },
@@ -40,26 +41,26 @@ export default function BilgiAlPage() {
         handleSubmit,
         control,
         formState: { errors },
-    } = useForm<BilgiAlFormValues>({
-        resolver: zodResolver(bilgiAlSchema),
+    } = useForm<InfoRequestFormInput, unknown, InfoRequestFormValues>({
+        resolver: zodResolver(infoRequestSchema),
         defaultValues: {
             name: "",
             phone: "",
+            message: "",
             is_whatsapp: false,
             priority: "normal",
-            message: "",
         },
     });
 
-    const onSubmit = async (values: BilgiAlFormValues) => {
-        const normalizedPhone = values.phone.replace(/\D/g, "");
+    const onSubmit = async (formValues: InfoRequestFormValues) => {
+        const normalizedPhone = formValues.phone.replace(/\D/g, "");
 
         const payload = {
-            name: values.name.trim(),
+            name: formValues.name.trim(),
             phone: normalizedPhone,
-            is_whatsapp: values.is_whatsapp,
-            priority: values.priority,
-            message: values.message.trim(),
+            is_whatsapp: formValues.is_whatsapp,
+            priority: formValues.priority,
+            message: formValues.message.trim(),
         };
 
         try {
@@ -176,19 +177,19 @@ export default function BilgiAlPage() {
                                     name="priority"
                                     render={({ field }) => (
                                         <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1.5">
-                                            {priorityItems.map((item) => {
-                                                const isActive = field.value === item.value;
+                                            {priorityOptions.map((option) => {
+                                                const isActive = field.value === option.value;
                                                 return (
                                                     <button
-                                                        key={item.value}
+                                                        key={option.value}
                                                         type="button"
-                                                        onClick={() => field.onChange(item.value)}
+                                                        onClick={() => field.onChange(option.value)}
                                                         className={`h-10 rounded-xl text-sm font-semibold transition-all ${isActive
                                                             ? "bg-[#1a365d] text-white shadow-sm"
                                                             : "text-slate-600 hover:bg-white"
                                                             }`}
                                                     >
-                                                        {item.label}
+                                                        {option.label}
                                                     </button>
                                                 );
                                             })}
