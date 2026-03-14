@@ -28,16 +28,17 @@ const getImageUrl = (imageUrl?: string | null) => {
     return `${process.env.NEXT_PUBLIC_API_URL}${imageUrl}`;
 };
 
-const extractPostId = (slug: string) => {
+const extractPostId = (slug: string): string | undefined => {
     const matchedId = slug.match(/(\d+)(?!.*\d)/);
-    return matchedId ? matchedId[1] : null;
+    return matchedId?.[1];
 };
 
 export default function BlogPostDetailPage({ params }: { params: Promise<PageParams> }) {
     const { slug } = use(params);
     const identifier = extractPostId(slug);
+    const queryIdentifier = identifier ?? "";
 
-    const { data: post, isLoading, error } = useGetBlogPostDetailQuery(identifier, {
+    const { data: post, isLoading, error } = useGetBlogPostDetailQuery(queryIdentifier, {
         skip: !identifier,
     });
 
