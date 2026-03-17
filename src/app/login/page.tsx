@@ -10,9 +10,8 @@ import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useLoginMutation } from "@/lib/features/auth/authApi";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { useLazyGetProfileQuery } from "@/lib/features/auth/authApi";
 import { useAppDispatch } from "@/lib/hooks";
-import { setAuthSession } from "@/lib/features/auth/authSessionSlice";
+import { setAuthSession, setAuthToken } from "@/lib/features/auth/authSessionSlice";
 import { useGetWebpageContentsQuery } from "@/lib/features/blog/blogApi";
 
 import { Button } from "@/components/ui/button";
@@ -43,7 +42,6 @@ type LoginSuccessPayload = {
 export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [login, { isLoading }] = useLoginMutation();
-    const [triggerGetProfile] = useLazyGetProfileQuery();
     const dispatch = useAppDispatch();
     const router = useRouter();
     const { data: logoContentData, isLoading: isLogoQueryLoading, isFetching: isLogoQueryFetching } =
@@ -56,38 +54,43 @@ export default function LoginPage() {
     );
     const dynamicLogo = logoContent?.logo_url?.trim() ? logoContent.logo_url : "/logo.webp";
 
-    const updateAuthStorage = (
-        credentials: LoginSuccessPayload,
-        userInfo: {
+    const updateAuthStorage = (credentials: LoginSuccessPayload) => {
+        const expiresInSeconds = Number(credentials.expires_in ?? credentials.expires_time ?? 0);
+        const tokenExpiryDate = Date.now() + Math.max(expiresInSeconds, 0) * 1000;
+
+        // Force overwrite legacy auth keys to prevent stale token races.
+        localStorage.setItem("access", credentials.access);
+        localStorage.setItem("refresh", credentials.refresh);
+        localStorage.setItem("expires_time", String(tokenExpiryDate));
+
+        const isStorageUpdated =
+            localStorage.getItem("access") === credentials.access &&
+            localStorage.getItem("refresh") === credentials.refresh &&
+            localStorage.getItem("expires_time") === String(tokenExpiryDate);
+
+        return { isStorageUpdated, tokenExpiryDate };
+    };
+
+    const fetchProfileWithToken = async (accessToken: string) => {
+        const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}users/profile/`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        });
+        const profilePayload = await profileResponse.json();
+
+        if (!profileResponse.ok) {
+            throw { data: profilePayload };
+        }
+
+        return profilePayload as {
             email: string;
             username: string;
             first_name: string;
             last_name: string;
             user_type: string;
-        }
-    ) => {
-        const expiresInSeconds = Number(credentials.expires_in ?? credentials.expires_time ?? 0);
-        const tokenExpiryDate = new Date(Date.now() + Math.max(expiresInSeconds, 0) * 1000).toISOString();
-        const serializedUserInfo = JSON.stringify(userInfo);
-
-        // Force overwrite auth keys with the latest successful login payload.
-        localStorage.setItem("access_token", credentials.access);
-        localStorage.setItem("refresh_token", credentials.refresh);
-        localStorage.setItem("expires_at", tokenExpiryDate);
-        localStorage.setItem("user_info", serializedUserInfo);
-
-        // Backward compatibility for parts of the app still reading legacy keys.
-        localStorage.setItem("access", credentials.access);
-        localStorage.setItem("refresh", credentials.refresh);
-        localStorage.setItem("expires_time", String(expiresInSeconds));
-
-        const isStorageUpdated =
-            localStorage.getItem("access_token") === credentials.access &&
-            localStorage.getItem("refresh_token") === credentials.refresh &&
-            localStorage.getItem("expires_at") === tokenExpiryDate &&
-            localStorage.getItem("user_info") === serializedUserInfo;
-
-        return { isStorageUpdated, tokenExpiryDate };
+        };
     };
 
     const handleLoginSuccess = (
@@ -100,12 +103,6 @@ export default function LoginPage() {
             user_type: string;
         }
     ) => {
-        const { isStorageUpdated } = updateAuthStorage(credentials, profileResult);
-        if (!isStorageUpdated) {
-            toast.error("Oturum bilgileri kaydedilemedi. Lütfen tekrar deneyin.");
-            return;
-        }
-
         dispatch(
             setAuthSession({
                 user: {
@@ -147,8 +144,14 @@ export default function LoginPage() {
                 password: values.password,
             }).unwrap();
 
-            // Fetch profile to determine user_type for redirect
-            const profileResult = await triggerGetProfile().unwrap();
+            const { isStorageUpdated } = updateAuthStorage(response);
+            if (!isStorageUpdated || !localStorage.getItem("access")) {
+                toast.error("Oturum bilgileri kaydedilemedi. Lütfen tekrar deneyin.");
+                return;
+            }
+
+            dispatch(setAuthToken(response.access));
+            const profileResult = await fetchProfileWithToken(response.access);
             handleLoginSuccess(response, profileResult);
         } catch (error: any) {
             console.error("Login Error:", error);
