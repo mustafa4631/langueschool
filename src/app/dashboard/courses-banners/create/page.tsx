@@ -40,29 +40,31 @@ type ErrorPayload = {
 const extractErrorMessage = (payload: ErrorPayload["data"]) => {
     if (!payload) return "";
     if (typeof payload === "string") return payload;
-    if (payload.detail) return payload.detail;
-    if (payload.message) return payload.message;
-    if (payload.errors) {
-        const firstKey = Object.keys(payload.errors)[0];
-        const firstMessage = firstKey ? payload.errors[firstKey]?.[0] : "";
+
+    if (typeof payload !== "object") return "";
+
+    const payloadRecord = payload as {
+        detail?: unknown;
+        message?: unknown;
+        errors?: unknown;
+    };
+
+    if (typeof payloadRecord.detail === "string") return payloadRecord.detail;
+    if (typeof payloadRecord.message === "string") return payloadRecord.message;
+
+    if (payloadRecord.errors && typeof payloadRecord.errors === "object") {
+        const errorsRecord = payloadRecord.errors as Record<string, unknown>;
+        const firstKey = Object.keys(errorsRecord)[0];
+        const firstValue = firstKey ? errorsRecord[firstKey] : undefined;
+        const firstMessage = Array.isArray(firstValue) && typeof firstValue[0] === "string" ? firstValue[0] : "";
         return firstMessage || "";
     }
+
     return "";
 };
 
 const extractCreatedResponse = (payload: ErrorPayload["data"]) => {
     if (!payload) return null;
-
-    if (typeof payload === "object") {
-        const statusCode = Number(payload.status);
-        if ([200, 201].includes(statusCode)) {
-            return {
-                status: statusCode,
-                message: payload.message || "Bannerlar başarıyla kaydedildi.",
-            };
-        }
-        return null;
-    }
 
     if (typeof payload === "string") {
         try {
@@ -77,6 +79,21 @@ const extractCreatedResponse = (payload: ErrorPayload["data"]) => {
         } catch {
             return null;
         }
+    }
+
+    if (typeof payload === "object") {
+        const payloadRecord = payload as { status?: unknown; message?: unknown };
+        const statusCode = Number(payloadRecord.status);
+        if ([200, 201].includes(statusCode)) {
+            return {
+                status: statusCode,
+                message:
+                    typeof payloadRecord.message === "string"
+                        ? payloadRecord.message
+                        : "Bannerlar başarıyla kaydedildi.",
+            };
+        }
+        return null;
     }
 
     return null;
