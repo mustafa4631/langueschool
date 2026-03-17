@@ -124,6 +124,8 @@ CORS_ALLOWED_ORIGINS = [
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+db_options = {"sslmode": "require"} if not DEBUG else {}
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -132,9 +134,7 @@ DATABASES = {
         "PASSWORD": os.getenv("DB_PASSWORD"),
         "HOST": os.getenv("DB_HOST"),
         "PORT": os.getenv("DB_PORT"),
-        # "OPTIONS": {
-        #     "sslmode": "require",
-        # },
+        "OPTIONS": db_options,
     }
 }
 if DEBUG:
