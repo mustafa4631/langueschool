@@ -33,6 +33,13 @@ const loginSchema = z.object({
     password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
 });
 
+type LoginSuccessPayload = {
+    access: string;
+    refresh: string;
+    expires_time?: number;
+    expires_in?: number;
+};
+
 export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [login, { isLoading }] = useLoginMutation();
@@ -48,6 +55,81 @@ export default function LoginPage() {
         [logoContentData?.results]
     );
     const dynamicLogo = logoContent?.logo_url?.trim() ? logoContent.logo_url : "/logo.webp";
+
+    const updateAuthStorage = (
+        credentials: LoginSuccessPayload,
+        userInfo: {
+            email: string;
+            username: string;
+            first_name: string;
+            last_name: string;
+            user_type: string;
+        }
+    ) => {
+        const expiresInSeconds = Number(credentials.expires_in ?? credentials.expires_time ?? 0);
+        const tokenExpiryDate = new Date(Date.now() + Math.max(expiresInSeconds, 0) * 1000).toISOString();
+        const serializedUserInfo = JSON.stringify(userInfo);
+
+        // Force overwrite auth keys with the latest successful login payload.
+        localStorage.setItem("access_token", credentials.access);
+        localStorage.setItem("refresh_token", credentials.refresh);
+        localStorage.setItem("expires_at", tokenExpiryDate);
+        localStorage.setItem("user_info", serializedUserInfo);
+
+        // Backward compatibility for parts of the app still reading legacy keys.
+        localStorage.setItem("access", credentials.access);
+        localStorage.setItem("refresh", credentials.refresh);
+        localStorage.setItem("expires_time", String(expiresInSeconds));
+
+        const isStorageUpdated =
+            localStorage.getItem("access_token") === credentials.access &&
+            localStorage.getItem("refresh_token") === credentials.refresh &&
+            localStorage.getItem("expires_at") === tokenExpiryDate &&
+            localStorage.getItem("user_info") === serializedUserInfo;
+
+        return { isStorageUpdated, tokenExpiryDate };
+    };
+
+    const handleLoginSuccess = (
+        credentials: LoginSuccessPayload,
+        profileResult: {
+            email: string;
+            username: string;
+            first_name: string;
+            last_name: string;
+            user_type: string;
+        }
+    ) => {
+        const { isStorageUpdated } = updateAuthStorage(credentials, profileResult);
+        if (!isStorageUpdated) {
+            toast.error("Oturum bilgileri kaydedilemedi. Lütfen tekrar deneyin.");
+            return;
+        }
+
+        dispatch(
+            setAuthSession({
+                user: {
+                    email: profileResult.email,
+                    username: profileResult.username,
+                    first_name: profileResult.first_name,
+                    last_name: profileResult.last_name,
+                    user_type: profileResult.user_type,
+                },
+                token: credentials.access,
+            })
+        );
+
+        if (profileResult.user_type === "admin") {
+            toast.success("Giriş başarılı! Dashboard'a yönlendiriliyorsunuz...");
+            router.push("/dashboard");
+            router.refresh();
+            return;
+        }
+
+        toast.success("Giriş başarılı, yönlendiriliyorsunuz...");
+        router.push("/");
+        router.refresh();
+    };
 
     // Initialize React Hook Form
     const form = useForm({
@@ -65,36 +147,9 @@ export default function LoginPage() {
                 password: values.password,
             }).unwrap();
 
-            // Save tokens to localStorage
-            localStorage.setItem("access", response.access);
-            localStorage.setItem("refresh", response.refresh);
-            localStorage.setItem("expires_time", String(response.expires_time));
-
             // Fetch profile to determine user_type for redirect
             const profileResult = await triggerGetProfile().unwrap();
-            const userType = profileResult?.user_type;
-            dispatch(
-                setAuthSession({
-                    user: {
-                        email: profileResult.email,
-                        username: profileResult.username,
-                        first_name: profileResult.first_name,
-                        last_name: profileResult.last_name,
-                        user_type: profileResult.user_type,
-                    },
-                    token: response.access,
-                })
-            );
-
-            if (userType === "admin") {
-                toast.success("Giriş başarılı! Dashboard'a yönlendiriliyorsunuz...");
-                router.push("/dashboard");
-                router.refresh();
-            } else {
-                toast.success("Giriş başarılı, yönlendiriliyorsunuz...");
-                router.push("/");
-                router.refresh();
-            }
+            handleLoginSuccess(response, profileResult);
         } catch (error: any) {
             console.error("Login Error:", error);
             // Default error message, you can map different status codes if needed

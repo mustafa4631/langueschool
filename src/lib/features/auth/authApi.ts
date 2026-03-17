@@ -8,6 +8,7 @@ export interface LoginRequest {
 export interface LoginResponse {
     access: string;
     refresh: string;
+    expires_in?: number;
     expires_time: number;
 }
 
