@@ -2,7 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { Instagram, Linkedin, Mail, MapPin, PhoneCall } from "lucide-react";
 
-export function Footer() {
+type FooterProps = {
+    logoSrc?: string;
+};
+
+export function Footer({ logoSrc = "/logo.webp" }: FooterProps) {
     return (
         <footer className="bg-slate-50 border-t pt-16 pb-8">
             <div className="container mx-auto px-4 md:px-6 text-center">
@@ -11,18 +15,23 @@ export function Footer() {
                     <div className="md:col-span-1">
                         <div className="mb-4">
                             <Link href="/">
-                                <Image
-                                    src="/logo.webp"
-                                    alt="Alman Akademisi Logo"
-                                    width={200}
-                                    height={100}
-                                    className="h-24 w-auto object-contain"
-                                />
+                                {logoSrc.startsWith("http://") || logoSrc.startsWith("https://") ? (
+                                    <img
+                                        src={logoSrc}
+                                        alt="Alman Akademisi Logo"
+                                        className="h-24 w-auto object-contain"
+                                    />
+                                ) : (
+                                    <Image
+                                        src={logoSrc}
+                                        alt="Alman Akademisi Logo"
+                                        width={200}
+                                        height={100}
+                                        className="h-24 w-auto object-contain"
+                                    />
+                                )}
                             </Link>
                         </div>
-                        <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
-                            Türkiye'nin lider dijital dil akademisi. Almanca'yı modern metotlarla, uzmandan online dilde öğrenin.
-                        </p>
                     </div>
                     <div>
                         <h4 className="font-bold mb-4">Kurumsal</h4>
@@ -30,16 +39,14 @@ export function Footer() {
                             <li><Link href="#">Hakkımızda</Link></li>
                             <li><Link href="#">Gizlilik Politikası</Link></li>
                             <li><Link href="#">Kullanım Şartları</Link></li>
-                            <li><Link href="#">Eğitmen Başvurusu</Link></li>
                         </ul>
                     </div>
                     <div>
                         <h4 className="font-bold mb-4">Hızlı Linkler</h4>
                         <ul className="space-y-2 text-sm text-slate-600">
                             <li><Link href="#">Online Kurslar</Link></li>
-                            <li><Link href="#">Whatsapp Kulübü</Link></li>
-                            <li><Link href="#">Birebir Eğitim</Link></li>
-                            <li><Link href="#">Sıkça Sorulan Sorular</Link></li>
+                            <li><Link href="/kurslar/ozel-ders">Birebir Eğitim</Link></li>
+                            <li><Link href="/sikca-sorulan-sorular">Sıkça Sorulan Sorular</Link></li>
                         </ul>
                     </div>
                     <div>

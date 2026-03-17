@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +14,18 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { useGetDigitalProductOrdersQuery, useApproveRefundMutation, DigitalProductOrder } from "@/lib/features/orders/ordersApi";
+import { Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { useGetDigitalProductOrdersQuery, useApproveRefundMutation, useSendProductMailMutation, DigitalProductOrder } from "@/lib/features/orders/ordersApi";
 import { toast } from "react-hot-toast";
 import { RefundModal } from "./RefundModal";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+const sendProductMailSchema = z.object({
+    product_link: z
+        .string()
+        .nonempty("Lütfen geçerli bir URL giriniz")
+        .url({ message: "Lütfen geçerli bir URL giriniz" }),
+});
 
 export default function DigitalProductsOrdersPage() {
     const [page, setPage] = useState(1);
@@ -28,6 +37,11 @@ export default function DigitalProductsOrdersPage() {
     const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
     const [selectedOrderForRefund, setSelectedOrderForRefund] = useState<DigitalProductOrder | null>(null);
     const [approveRefund, { isLoading: isRefundSubmitting }] = useApproveRefundMutation();
+    const [sendProductMail, { isLoading: isProductMailSubmitting }] = useSendProductMailMutation();
+    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    const [digitalProductOrderId, setDigitalProductOrderId] = useState<number | null>(null);
+    const [productLinkValue, setProductLinkValue] = useState("");
+    const [productLinkError, setProductLinkError] = useState("");
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -37,7 +51,7 @@ export default function DigitalProductsOrdersPage() {
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    const { data: orderListData, isLoading: isOrdersLoading, isFetching, isError } = useGetDigitalProductOrdersQuery(
+    const { data: orderListData, isLoading: isOrdersLoading, isFetching, isError, refetch } = useGetDigitalProductOrdersQuery(
         { page, search: debouncedSearch, status: statusFilter, ordering }
     );
 
@@ -62,6 +76,42 @@ export default function DigitalProductsOrdersPage() {
             setSelectedOrderForRefund(null);
         } catch (error: any) {
             toast.error(error?.data?.message || "İade işlemi sırasında bir hata oluştu.");
+        }
+    };
+
+    const openProductLinkModal = (orderId: number) => {
+        setDigitalProductOrderId(orderId);
+        setProductLinkValue("");
+        setProductLinkError("");
+        setIsProductModalOpen(true);
+    };
+
+    const productLinkSubmit = async () => {
+        const parsed = sendProductMailSchema.safeParse({ product_link: productLinkValue.trim() });
+        if (!parsed.success) {
+            setProductLinkError(parsed.error.issues[0]?.message || "Lütfen geçerli bir URL giriniz");
+            return;
+        }
+
+        if (!digitalProductOrderId) {
+            toast.error("Sipariş seçimi bulunamadı.");
+            return;
+        }
+
+        try {
+            const productLinkRequest = {
+                order_id: digitalProductOrderId,
+                product_link: parsed.data.product_link,
+            };
+            await sendProductMail(productLinkRequest).unwrap();
+            toast.success("Link başarıyla gönderildi");
+            setIsProductModalOpen(false);
+            setDigitalProductOrderId(null);
+            setProductLinkValue("");
+            setProductLinkError("");
+            refetch();
+        } catch (error: any) {
+            toast.error(error?.data?.message || error?.data?.detail || "Link gönderilirken bir hata oluştu.");
         }
     };
 
@@ -226,9 +276,13 @@ export default function DigitalProductsOrdersPage() {
                         ) : (
                             orderListData?.results?.map((order) => {
                                 const normalizedStatus = order.status?.toLowerCase();
+                                const isProductOrderCompleted = normalizedStatus === "completed";
+                                const isLinkAlreadySent = order.is_link_send === true;
+                                const canSendProductLink = isProductOrderCompleted && !isLinkAlreadySent;
                                 const isRefundRequested =
                                     normalizedStatus === "refund_requested" ||
                                     (order.refund_requested === true && normalizedStatus !== "refunded");
+                                const renderActionButtons = canSendProductLink || isRefundRequested;
                                 return (
                                     <TableRow
                                         key={order.id}
@@ -254,17 +308,33 @@ export default function DigitalProductsOrdersPage() {
                                             {getStatusBadge(order.status)}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            {isRefundRequested ? (
-                                                <Button
-                                                    size="sm"
-                                                    className="h-8 rounded-lg bg-[#1A3EB1] hover:bg-[#1A3EB1]/90 text-white"
-                                                    onClick={() => {
-                                                        setSelectedOrderForRefund(order);
-                                                        setIsRefundModalOpen(true);
-                                                    }}
-                                                >
-                                                    İadeyi Onayla
-                                                </Button>
+                                            {renderActionButtons ? (
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {canSendProductLink && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-8 px-3 text-xs font-semibold rounded-lg border border-[#1A3EB1]/20 text-[#1A3EB1] hover:bg-[#1A3EB1]/5"
+                                                            onClick={() => {
+                                                                openProductLinkModal(order.id);
+                                                            }}
+                                                        >
+                                                            Link Gönder
+                                                        </Button>
+                                                    )}
+                                                    {isRefundRequested && (
+                                                        <Button
+                                                            size="sm"
+                                                            className="h-8 rounded-lg bg-[#1A3EB1] hover:bg-[#1A3EB1]/90 text-white"
+                                                            onClick={() => {
+                                                                setSelectedOrderForRefund(order);
+                                                                setIsRefundModalOpen(true);
+                                                            }}
+                                                        >
+                                                            İadeyi Onayla
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <span className="text-slate-300">-</span>
                                             )}
@@ -319,6 +389,55 @@ export default function DigitalProductsOrdersPage() {
                 onConfirm={handleRefundSubmit}
                 isLoading={isRefundSubmitting}
             />
+
+            <Dialog open={isProductModalOpen} onOpenChange={setIsProductModalOpen}>
+                <DialogContent className="sm:max-w-[460px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold text-slate-900">Dijital Eser Linki Gönder</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-2 py-2">
+                        <label className="text-sm font-medium text-slate-700">Ürün/Eser İndirme Linki</label>
+                        <Input
+                            placeholder="https://..."
+                            value={productLinkValue}
+                            onChange={(event) => {
+                                setProductLinkValue(event.target.value);
+                                if (productLinkError) setProductLinkError("");
+                            }}
+                            className={productLinkError ? "border-red-500 focus-visible:ring-red-500/30" : ""}
+                        />
+                        {productLinkError && <p className="text-xs text-red-500">{productLinkError}</p>}
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setIsProductModalOpen(false);
+                                setDigitalProductOrderId(null);
+                                setProductLinkValue("");
+                                setProductLinkError("");
+                            }}
+                            disabled={isProductMailSubmitting}
+                        >
+                            İptal
+                        </Button>
+                        <Button
+                            onClick={productLinkSubmit}
+                            disabled={isProductMailSubmitting}
+                            className="bg-[#1A3EB1] hover:bg-[#1A3EB1]/90 text-white"
+                        >
+                            {isProductMailSubmitting ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Gönderiliyor...
+                                </>
+                            ) : (
+                                "Gönder"
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

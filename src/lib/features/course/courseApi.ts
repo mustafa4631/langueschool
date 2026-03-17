@@ -351,7 +351,7 @@ export const courseApi = createApi({
             }),
             invalidatesTags: ['Exams'],
         }),
-        getCourseList: builder.query<CourseListResponse, { page?: number; name?: string; level?: string; type?: string; ordering?: string; available?: boolean }>({
+        getCourseList: builder.query<CourseListResponse, { page?: number; name?: string; level?: string; type?: string; ordering?: string; available?: boolean; is_private_lesson?: boolean }>({
             query: (params) => {
                 const queryParams: Record<string, string | number> = {};
                 if (params.page) queryParams.page = params.page;
@@ -360,6 +360,9 @@ export const courseApi = createApi({
                 if (params.type && params.type !== "all") queryParams.type = params.type;
                 if (params.ordering) queryParams.ordering = params.ordering;
                 if (typeof params.available === "boolean") queryParams.available = params.available ? "true" : "false";
+                if (typeof params.is_private_lesson === "boolean") {
+                    queryParams.is_private_lesson = params.is_private_lesson ? "true" : "false";
+                }
 
                 const token = typeof window !== 'undefined' ? localStorage.getItem('access') : null;
 

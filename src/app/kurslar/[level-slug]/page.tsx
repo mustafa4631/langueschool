@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CourseFeaturesSlider } from "@/components/course/CourseFeaturesSlider";
-import { Loader2, Phone } from "lucide-react";
+import { Clock3, Eye, Loader2, Monitor, Phone, Search } from "lucide-react";
 import { useAppDispatch } from "@/lib/hooks";
 import { addToCart } from "@/lib/features/cart/cartSlice";
 
@@ -24,15 +24,83 @@ const SLUG_TO_LEVEL: Record<string, string> = {
     "ozel-ders": "Özel Ders"
 };
 
+const courseFeatures = [
+    {
+        featureTitle: "Ders Kaçırma Derdi Yok",
+        featureDescription:
+            "Yoğun bir iş/okul hayatınızın olduğunu biliyoruz. O yüzden tüm dersleri kayıt altına alıyoruz.",
+        FeatureIcon: Clock3,
+    },
+    {
+        featureTitle: "Sınırsız İzleme Hakkı",
+        featureDescription:
+            "Dersleri sonsuz kez tekrar edebilirsin. Kurs bitse bile kayıtları senin için açık tutacağız.",
+        FeatureIcon: Eye,
+    },
+    {
+        featureTitle: "Öğrenci odaklı canlı dersler",
+        featureDescription:
+            "Öğrenci ihtiyaçlarını ön planda tutan, öğrenme hızınıza göre ilerleyen dinamik bir süreçtir.",
+        FeatureIcon: Search,
+    },
+    {
+        featureTitle: "Gelişmiş Sanal Sınıflar",
+        featureDescription:
+            "Her şey tam da olması gerektiği gibi. Karmaşık süreçler olmadan.",
+        FeatureIcon: Monitor,
+    },
+];
+
+function CourseFeatures() {
+    return (
+        <section className="mt-24 pt-20 border-t border-slate-200">
+            <div className="text-center mb-14">
+                <h2 className="text-3xl md:text-4xl font-black text-slate-900">
+                    Neden <span className="text-[#2563eb]">Alman Akademisi?</span>
+                </h2>
+                <p className="text-slate-600 text-lg mt-3">İyi bir Almanca eğitimi hakkınız.</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {courseFeatures.map((feature, index) => {
+                    const Icon = feature.FeatureIcon;
+                    const { featureTitle, featureDescription } = feature;
+
+                    return (
+                        <div
+                            key={`${featureTitle}-${index}`}
+                            className="rounded-[24px] border border-slate-100 bg-white p-8 text-center shadow-sm"
+                        >
+                            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#4f46e5]/10">
+                                <Icon className="h-8 w-8 text-[#4f46e5]" />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-900 mb-3 leading-tight">
+                                {featureTitle}
+                            </h3>
+                            <p className="text-slate-600 leading-relaxed font-medium">
+                                {featureDescription}
+                            </p>
+                        </div>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
 export default function LevelCoursePage({ params }: { params: Promise<{ "level-slug": string }> }) {
     // Unpack params and map the level string from the matched slug.
     const resolvedParams = use(params);
     const slug = resolvedParams["level-slug"];
     const activeLevel = SLUG_TO_LEVEL[slug] || "A1";
+    const isPrivateLesson = slug === "ozel-ders";
+    const fetchParams = isPrivateLesson
+        ? { is_private_lesson: true as const }
+        : { level: activeLevel, is_private_lesson: false as const };
     const dispatch = useAppDispatch();
     const [addedItemKey, setAddedItemKey] = useState<string | null>(null);
 
-    const { data: coursesData, isLoading, error } = useGetCourseListQuery({ level: activeLevel });
+    const { data: coursesData, isLoading, error } = useGetCourseListQuery(fetchParams);
     const courseListByLevel = coursesData?.results || [];
     const { data: studentReviewsData } = useGetStudentReviewsQuery({});
     const allStudentReviews = studentReviewsData?.results || [];
@@ -215,28 +283,7 @@ export default function LevelCoursePage({ params }: { params: Promise<{ "level-s
                     </div>
                 )}
 
-                {/* Features Section - Neden Alman Akademisi? */}
-                <section className="mt-24 pt-20 border-t border-slate-200">
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Neden Alman Akademisi?</h2>
-                        <p className="text-slate-600 text-lg max-w-2xl mx-auto">Size en iyi öğrenme deneyimini sunmak için sürekli gelişen eğitim modelimizle yanınızdayız.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {[
-                            { title: "Ders Kaçırma Derdi Yok", desc: "Tüm canlı dersler kaydedilir ve panonuzdan tekrar izleyebilirsiniz.", icon: "🎥" },
-                            { title: "Yabancı Dil Hafıza Teknikleri", desc: "Görsel hafıza teknikleri ile kelime ezberleme sorunu tarihe karışır.", icon: "🧠" },
-                            { title: "Öğrenci Odaklı Canlı Dersler", desc: "Bol pratikli interaktif sınıf ortamıyla Almancaya maruz kalın.", icon: "👨‍🏫" },
-                            { title: "Gelişmiş Kanal Sistemi", desc: "Öğretmenler ile dilediğiniz an iletişimde kalarak takıldığınız yerleri sorun.", icon: "💬" }
-                        ].map((feature, idx) => (
-                            <div key={idx} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center text-center">
-                                <div className="text-5xl mb-6 bg-slate-50 w-20 h-20 flex items-center justify-center rounded-2xl">{feature.icon}</div>
-                                <h3 className="text-xl font-bold text-slate-800 mb-3">{feature.title}</h3>
-                                <p className="text-slate-500 leading-relaxed font-medium">{feature.desc}</p>
-                            </div>
-                        ))}
-                    </div>
-                </section>
+                <CourseFeatures />
 
                 <CourseFeaturesSlider />
 

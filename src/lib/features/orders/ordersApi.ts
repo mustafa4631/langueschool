@@ -12,6 +12,7 @@ export interface CourseOrder {
     total_amount: string | number;
     status: string;
     refund_requested?: boolean;
+    is_link_send?: boolean;
 }
 
 export interface CourseOrderListResponse {
@@ -32,6 +33,7 @@ export interface DigitalProductOrder {
     total_amount: string | number;
     status: string;
     refund_requested?: boolean;
+    is_link_send?: boolean;
 }
 
 export interface OrderListResponse {
@@ -46,7 +48,7 @@ export const ordersApi = createApi({
     baseQuery: fetchBaseQuery({
         baseUrl: process.env.NEXT_PUBLIC_API_URL,
         prepareHeaders: (headers, { endpoint }) => {
-            const authEndpoints = ['getDigitalProductOrders', 'getCourseOrders', 'approveRefund', 'approveCourseRefund'];
+            const authEndpoints = ['getDigitalProductOrders', 'getCourseOrders', 'approveRefund', 'approveCourseRefund', 'sendCourseLink', 'sendProductMail'];
             if (authEndpoints.includes(endpoint)) {
                 const token =
                     typeof window !== 'undefined'
@@ -76,13 +78,14 @@ export const ordersApi = createApi({
             },
             providesTags: ['Orders'],
         }),
-        getCourseOrders: builder.query<CourseOrderListResponse, { page?: number; search?: string; status?: string; ordering?: string }>({
+        getCourseOrders: builder.query<CourseOrderListResponse, { page?: number; search?: string; status?: string; ordering?: string; is_private_lesson?: boolean }>({
             query: (params) => {
                 const queryParams: Record<string, string | number> = {};
                 if (params.page) queryParams.page = params.page;
                 if (params.search) queryParams.search = params.search;
                 if (params.status && params.status !== "all") queryParams.status = params.status;
                 if (params.ordering) queryParams.ordering = params.ordering;
+                if (typeof params.is_private_lesson === "boolean") queryParams.is_private_lesson = String(params.is_private_lesson);
 
                 return {
                     url: 'courses/admin-course-orders/',
@@ -106,6 +109,22 @@ export const ordersApi = createApi({
             }),
             invalidatesTags: ['Orders'],
         }),
+        sendCourseLink: builder.mutation<any, { order_id: number; course_link: string }>({
+            query: (body) => ({
+                url: 'courses/send-course-link/',
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: ['Orders'],
+        }),
+        sendProductMail: builder.mutation<any, { order_id: number; product_link: string }>({
+            query: (body) => ({
+                url: 'products/send-product-mail/',
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: ['Orders'],
+        }),
     }),
 });
 
@@ -114,4 +133,6 @@ export const {
     useGetCourseOrdersQuery,
     useApproveRefundMutation,
     useApproveCourseRefundMutation,
+    useSendCourseLinkMutation,
+    useSendProductMailMutation,
 } = ordersApi;

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import toast from "react-hot-toast";
@@ -13,24 +13,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 
 const infoRequestSchema = z.object({
     name: z.string().min(2, "Ad Soyad gereklidir"),
     phone: z.string().min(10, "Geçerli bir telefon numarası giriniz"),
-    is_whatsapp: z.boolean().default(false),
-    priority: z.enum(["low", "normal", "high"]).default("normal"),
+    contact_preferences: z
+        .array(z.enum(["call_me", "whatsapp_me"]))
+        .min(1, "Lütfen en az bir iletişim yöntemi seçiniz."),
     message: z.string().min(10, "Mesajınız en az 10 karakter olmalıdır"),
 });
 
 type InfoRequestFormInput = z.input<typeof infoRequestSchema>;
 type InfoRequestFormValues = z.output<typeof infoRequestSchema>;
-
-const priorityOptions: Array<{ label: string; value: InfoRequestFormValues["priority"] }> = [
-    { label: "Düşük", value: "low" },
-    { label: "Normal", value: "normal" },
-    { label: "Yüksek", value: "high" },
-];
 
 export default function BilgiAlPage() {
     const router = useRouter();
@@ -39,7 +33,7 @@ export default function BilgiAlPage() {
     const {
         register,
         handleSubmit,
-        control,
+        watch,
         formState: { errors },
     } = useForm<InfoRequestFormInput, unknown, InfoRequestFormValues>({
         resolver: zodResolver(infoRequestSchema),
@@ -47,19 +41,23 @@ export default function BilgiAlPage() {
             name: "",
             phone: "",
             message: "",
-            is_whatsapp: false,
-            priority: "normal",
+            contact_preferences: ["call_me"],
         },
     });
 
+    const selectedPreferences = watch("contact_preferences") || [];
+    const hasSelectedPreference = selectedPreferences.length > 0;
+
     const onSubmit = async (formValues: InfoRequestFormValues) => {
         const normalizedPhone = formValues.phone.replace(/\D/g, "");
+        const isPhoneRequest = formValues.contact_preferences.includes("call_me");
+        const isWhatsappRequest = formValues.contact_preferences.includes("whatsapp_me");
 
         const payload = {
             name: formValues.name.trim(),
             phone: normalizedPhone,
-            is_whatsapp: formValues.is_whatsapp,
-            priority: formValues.priority,
+            is_phone: isPhoneRequest,
+            is_whatsapp: isWhatsappRequest,
             message: formValues.message.trim(),
         };
 
@@ -149,61 +147,38 @@ export default function BilgiAlPage() {
                             {errors.message && <p className="text-xs text-red-500">{errors.message.message}</p>}
                         </div>
 
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                <div className="flex items-center justify-between gap-4">
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-800">
-                                            WhatsApp üzerinden iletişime geçilmesini istiyorum
-                                        </p>
-                                        <p className="mt-1 text-xs text-slate-500">
-                                            Açık olduğunda size WhatsApp üzerinden ulaşırız.
-                                        </p>
-                                    </div>
-                                    <Controller
-                                        control={control}
-                                        name="is_whatsapp"
-                                        render={({ field }) => (
-                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                        )}
+                        <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-slate-700">Size nasıl ulaşalım?</Label>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-700">
+                                    <input
+                                        type="checkbox"
+                                        value="call_me"
+                                        className="h-4 w-4 accent-[#1A3EB1]"
+                                        {...register("contact_preferences")}
                                     />
-                                </div>
-                            </div>
+                                    <span>Beni arayın</span>
+                                </label>
 
-                            <div className="space-y-2">
-                                <Label className="text-sm font-semibold text-slate-700">Öncelik</Label>
-                                <Controller
-                                    control={control}
-                                    name="priority"
-                                    render={({ field }) => (
-                                        <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1.5">
-                                            {priorityOptions.map((option) => {
-                                                const isActive = field.value === option.value;
-                                                return (
-                                                    <button
-                                                        key={option.value}
-                                                        type="button"
-                                                        onClick={() => field.onChange(option.value)}
-                                                        className={`h-10 rounded-xl text-sm font-semibold transition-all ${isActive
-                                                            ? "bg-[#1a365d] text-white shadow-sm"
-                                                            : "text-slate-600 hover:bg-white"
-                                                            }`}
-                                                    >
-                                                        {option.label}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                />
-                                {errors.priority && <p className="text-xs text-red-500">{errors.priority.message}</p>}
+                                <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-700">
+                                    <input
+                                        type="checkbox"
+                                        value="whatsapp_me"
+                                        className="h-4 w-4 accent-[#1A3EB1]"
+                                        {...register("contact_preferences")}
+                                    />
+                                    <span>WhatsApp’tan yazın</span>
+                                </label>
                             </div>
+                            {errors.contact_preferences && (
+                                <p className="text-xs text-red-500">{errors.contact_preferences.message}</p>
+                            )}
                         </div>
 
                         <div className="pt-2">
                             <Button
                                 type="submit"
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || !hasSelectedPreference}
                                 className="h-12 rounded-2xl bg-linear-to-r from-[#1A3EB1] to-[#1d4ed8] px-8 text-white font-bold shadow-lg shadow-blue-900/20 transition-transform hover:scale-[1.01] hover:from-[#15308A] hover:to-[#1a3eb1]"
                             >
                                 {isSubmitting ? (

@@ -6,7 +6,7 @@ export function CallToActionSection() {
         <section className="py-20 bg-slate-50">
             <div className="container mx-auto px-4 md:px-6 text-center">
                 <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-800 mb-8">
-                    Dil yolculuğunuza bizimle başlamaya hazır mısınız?
+                    Alman Akademisi ile Bağlantı Kurun
                 </h2>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <Button

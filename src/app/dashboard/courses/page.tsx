@@ -194,87 +194,104 @@ function CoursesPageContent() {
                             <Table>
                                 <TableHeader>
                                     <TableRow className="hover:bg-transparent border-b-slate-100 bg-slate-50/50">
-                                        <TableHead className="font-semibold text-xs text-slate-500 w-[35%]">KURS ADI</TableHead>
+                                        <TableHead className="font-semibold text-xs text-slate-500 w-[30%]">KURS ADI</TableHead>
                                         <TableHead className="font-semibold text-xs text-slate-500 w-[15%] text-center">SEVİYE</TableHead>
-                                        <TableHead className="font-semibold text-xs text-slate-500 w-[20%]">KURS TÜRÜ</TableHead>
+                                        <TableHead className="font-semibold text-xs text-slate-500 w-[15%]">KURS TÜRÜ</TableHead>
+                                        <TableHead className="font-semibold text-xs text-slate-500 w-[15%]">KURS TİPİ</TableHead>
                                         <TableHead className="font-semibold text-xs text-slate-500 w-[15%]">FİYAT</TableHead>
-                                        <TableHead className="font-semibold text-xs text-slate-500 text-right w-[15%]">İŞLEMLER</TableHead>
+                                        <TableHead className="font-semibold text-xs text-slate-500 text-right w-[10%]">İŞLEMLER</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {courseListResponse?.results && courseListResponse.results.length > 0 ? (
-                                        courseListResponse.results.map((course) => (
-                                            <TableRow
-                                                key={course.id}
-                                                className="group hover:bg-slate-50/80 transition-colors cursor-pointer"
-                                                onClick={() => handleRowClick(course.id)}
-                                            >
-                                                <TableCell className="border-b border-slate-100 py-3 px-4 lg:px-6">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="h-12 w-16 rounded-md bg-slate-100 overflow-hidden flex-shrink-0 relative border border-slate-200 flex items-center justify-center">
-                                                            {course.image_url ? (
-                                                                <Image
-                                                                    src={course.image_url}
-                                                                    alt={course.name}
-                                                                    fill
-                                                                    className="object-cover"
-                                                                />
-                                                            ) : (
-                                                                <ImageIcon className="h-6 w-6 text-slate-300" />
-                                                            )}
+                                        courseListResponse.results.map((course) => {
+                                            const isPrivate = Boolean(course.is_private_lesson);
+                                            const courseCategoryLabel = isPrivate ? "Özel Ders" : "Kurs";
+
+                                            return (
+                                                <TableRow
+                                                    key={course.id}
+                                                    className="group hover:bg-slate-50/80 transition-colors cursor-pointer"
+                                                    onClick={() => handleRowClick(course.id)}
+                                                >
+                                                    <TableCell className="border-b border-slate-100 py-3 px-4 lg:px-6">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="h-12 w-16 rounded-md bg-slate-100 overflow-hidden shrink-0 relative border border-slate-200 flex items-center justify-center">
+                                                                {course.image_url ? (
+                                                                    <Image
+                                                                        src={course.image_url}
+                                                                        alt={course.name}
+                                                                        fill
+                                                                        className="object-cover"
+                                                                    />
+                                                                ) : (
+                                                                    <ImageIcon className="h-6 w-6 text-slate-300" />
+                                                                )}
+                                                            </div>
+                                                            <span className="font-bold text-sm text-slate-900">{course.name}</span>
                                                         </div>
-                                                        <span className="font-bold text-sm text-slate-900">{course.name}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="border-b border-slate-100 py-3 px-4 lg:px-6 text-center">
-                                                    {course.level ? (
-                                                        <Badge className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold px-2.5 py-0.5 border-none shadow-none">
-                                                            {course.level}
+                                                    </TableCell>
+                                                    <TableCell className="border-b border-slate-100 py-3 px-4 lg:px-6 text-center">
+                                                        {course.level ? (
+                                                            <Badge className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold px-2.5 py-0.5 border-none shadow-none">
+                                                                {course.level}
+                                                            </Badge>
+                                                        ) : (
+                                                            <span className="text-slate-400">-</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="border-b border-slate-100 py-3 px-4 lg:px-6">
+                                                        <span className="font-medium text-slate-700 text-sm capitalize">{course.type}</span>
+                                                    </TableCell>
+                                                    <TableCell className="border-b border-slate-100 py-3 px-4 lg:px-6">
+                                                        <Badge
+                                                            className={
+                                                                isPrivate
+                                                                    ? "bg-blue-50 text-[#1A3EB1] hover:bg-blue-100 border-none shadow-none font-semibold"
+                                                                    : "bg-slate-100 text-slate-700 hover:bg-slate-200 border-none shadow-none font-semibold"
+                                                            }
+                                                        >
+                                                            {courseCategoryLabel}
                                                         </Badge>
-                                                    ) : (
-                                                        <span className="text-slate-400">-</span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="border-b border-slate-100 py-3 px-4 lg:px-6">
-                                                    <span className="font-medium text-slate-700 text-sm capitalize">{course.type}</span>
-                                                </TableCell>
-                                                <TableCell className="border-b border-slate-100 py-3 px-4 lg:px-6">
-                                                    <div className="flex flex-col">
-                                                        {Number(course.discounted_price) > 0 ? (
-                                                            <>
-                                                                <span className="text-xs text-slate-400 line-through">
+                                                    </TableCell>
+                                                    <TableCell className="border-b border-slate-100 py-3 px-4 lg:px-6">
+                                                        <div className="flex flex-col">
+                                                            {Number(course.discounted_price) > 0 ? (
+                                                                <>
+                                                                    <span className="text-xs text-slate-400 line-through">
+                                                                        {Number(course.price).toLocaleString('tr-TR')} ₺
+                                                                    </span>
+                                                                    <span className="font-bold text-sm text-slate-900">
+                                                                        {Number(course.discounted_price).toLocaleString('tr-TR')} ₺
+                                                                    </span>
+                                                                </>
+                                                            ) : (
+                                                                <span className="font-bold text-sm text-slate-900">
                                                                     {Number(course.price).toLocaleString('tr-TR')} ₺
                                                                 </span>
-                                                                <span className="font-bold text-sm text-slate-900">
-                                                                    {Number(course.discounted_price).toLocaleString('tr-TR')} ₺
-                                                                </span>
-                                                            </>
-                                                        ) : (
-                                                            <span className="font-bold text-sm text-slate-900">
-                                                                {Number(course.price).toLocaleString('tr-TR')} ₺
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-right border-b border-slate-100 py-3 px-4 lg:px-6">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSelectedCourseForDelete(course);
-                                                            setIsDeleteModalOpen(true);
-                                                        }}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-right border-b border-slate-100 py-3 px-4 lg:px-6">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedCourseForDelete(course);
+                                                                setIsDeleteModalOpen(true);
+                                                            }}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-48 text-center text-slate-500">
+                                            <TableCell colSpan={6} className="h-48 text-center text-slate-500">
                                                 {!isCourseListLoading && !isFetchingCourses && "Hiç kurs bulunamadı."}
                                             </TableCell>
                                         </TableRow>

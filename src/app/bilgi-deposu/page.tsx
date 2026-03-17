@@ -68,7 +68,7 @@ export default function BlogListPage() {
     const countLabel = useMemo(() => {
         const total = postsData?.count ?? 0;
         if (total === 0) return "Sonuc bulunamadi";
-        return `${total} blog yazisi bulundu`;
+        return `${total} bilgi deposu bulundu`;
     }, [postsData?.count]);
 
     return (
@@ -77,12 +77,11 @@ export default function BlogListPage() {
                 <nav className="py-4 mb-6 border-b border-gray-100 text-sm font-medium flex items-center">
                     <Link href="/" className="text-gray-500 hover:text-[#1e3a8a] transition-colors">Ana Sayfa</Link>
                     <span className="mx-2 text-gray-400">/</span>
-                    <Link href="/blog" className="text-[#1e3a8a]">Blog</Link>
+                    <Link href="/bilgi-deposu" className="text-[#1e3a8a]">Bilgi Deposu</Link>
                 </nav>
 
                 <section className="mb-10">
-                    <h1 className="text-4xl font-bold text-[#1e3a8a] mb-3">Blog</h1>
-                    <p className="text-gray-600 text-lg max-w-2xl">Almanca egitimi ve yurtdisi yasami hakkinda guncel icerikleri kesfedin.</p>
+                    <h1 className="text-4xl font-bold text-[#1e3a8a] mb-3">Bilgi Deposu</h1>
                 </section>
 
                 <section className="flex flex-col md:flex-row md:justify-between md:items-center gap-6 mb-10 w-full">
@@ -92,7 +91,7 @@ export default function BlogListPage() {
                             type="text"
                             value={searchInput}
                             onChange={(event) => setSearchInput(event.target.value)}
-                            placeholder="Bloglarda ara..."
+                            placeholder="Bilgi deposunda ara..."
                             className="h-[52px] pl-10 pr-5 rounded-xl border border-gray-200 bg-gray-50/30 focus:bg-white focus:border-[#1e3a8a] focus:ring-4 focus:ring-[#1e3a8a]/5 outline-none transition-all"
                         />
                     </div>
@@ -135,11 +134,11 @@ export default function BlogListPage() {
                     </div>
                 ) : error ? (
                     <div className="py-16 px-6 text-center rounded-2xl border border-slate-200 bg-white">
-                        <p className="text-slate-600 font-medium">Blog yazilari yuklenemedi.</p>
+                        <p className="text-slate-600 font-medium">Bilgi deposundaki bilgiler yuklenemedi.</p>
                     </div>
                 ) : isEmpty ? (
                     <div className="py-16 px-6 text-center rounded-2xl border border-slate-200 bg-white">
-                        <p className="text-slate-600 font-medium">Filtrelere uygun blog yazisi bulunamadi.</p>
+                        <p className="text-slate-600 font-medium">Filtrelere uygun bilgi deposundaki bilgiler bulunamadi.</p>
                     </div>
                 ) : (
                     <>
@@ -153,7 +152,7 @@ export default function BlogListPage() {
                                         key={post.id}
                                         className="h-full border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-lg transition-all duration-300"
                                     >
-                                        <Link href={`/blog/${createPostSlug(post.slug, post.id)}`} className="block">
+                                        <Link href={`/bilgi-deposu/${createPostSlug(post.slug, post.id)}`} className="block">
                                             <div className="relative aspect-video overflow-hidden">
                                                 <Image
                                                     src={getImageUrl(post.image_url)}
@@ -168,7 +167,7 @@ export default function BlogListPage() {
                                         <CardContent className="p-6">
                                             <p className="text-sm text-slate-500 font-medium mb-3">{formatDate(post.created_at)}</p>
 
-                                            <Link href={`/blog/${createPostSlug(post.slug, post.id)}`} className="block">
+                                            <Link href={`/bilgi-deposu/${createPostSlug(post.slug, post.id)}`} className="block">
                                                 <h2 className="text-xl font-bold text-[#1f2937] hover:text-[#1e3a8a] transition-colors line-clamp-2 mb-4 leading-snug">
                                                     {post.title}
                                                 </h2>

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Loader2 } from "lucide-react";
@@ -9,6 +9,7 @@ import Link from "next/link";
 
 export default function OrdersLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { isAuthorized, profile, isLoading: isAuthLoading } = useAuthGuard("admin");
 
     if (isAuthLoading || (!isAuthorized && typeof window !== "undefined")) {
@@ -20,8 +21,10 @@ export default function OrdersLayout({ children }: { children: React.ReactNode }
     }
 
     const isDigitalTabActive = pathname === "/dashboard/orders/digital-products";
-    // We treat anything under courses or other paths as not digital
-    const isCoursesTabActive = pathname === "/dashboard/orders/courses";
+    const orderTabType = searchParams.get("orderTabType") === "private" ? "private" : "course";
+    const isCoursesRoute = pathname === "/dashboard/orders/courses";
+    const isCoursesTabActive = isCoursesRoute && orderTabType === "course";
+    const isPrivateLessonsTabActive = isCoursesRoute && orderTabType === "private";
 
     return (
         <div className="flex min-h-screen bg-[#F8FAFC]">
@@ -56,13 +59,22 @@ export default function OrdersLayout({ children }: { children: React.ReactNode }
                                 Dijital Eserler
                             </Link>
                             <Link
-                                href="/dashboard/orders/courses"
+                                href="/dashboard/orders/courses?orderTabType=course"
                                 className={`flex-1 sm:flex-none rounded-full px-6 py-2.5 font-medium text-sm transition-all text-center ${isCoursesTabActive
                                         ? "bg-[#1A3EB1] text-white shadow-sm hover:text-white"
                                         : "text-slate-600 hover:text-slate-900"
                                     }`}
                             >
                                 Kurslar
+                            </Link>
+                            <Link
+                                href="/dashboard/orders/courses?orderTabType=private"
+                                className={`flex-1 sm:flex-none rounded-full px-6 py-2.5 font-medium text-sm transition-all text-center ${isPrivateLessonsTabActive
+                                        ? "bg-[#1A3EB1] text-white shadow-sm hover:text-white"
+                                        : "text-slate-600 hover:text-slate-900"
+                                    }`}
+                            >
+                                Özel Ders
                             </Link>
                         </div>
 

@@ -6,13 +6,10 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
-import { useLoginMutation } from "@/lib/features/auth/authApi";
+import { Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { useRouter } from "next/navigation";
-import { useLazyGetProfileQuery } from "@/lib/features/auth/authApi";
-import { useAppDispatch } from "@/lib/hooks";
-import { setAuthSession } from "@/lib/features/auth/authSessionSlice";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useResetPasswordMutation } from "@/lib/features/auth/authApi";
 import { useGetWebpageContentsQuery } from "@/lib/features/blog/blogApi";
 
 import { Button } from "@/components/ui/button";
@@ -27,18 +24,23 @@ import {
 } from "@/components/ui/form";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-// Form Validation Schema
-const loginSchema = z.object({
-    username_or_email: z.string().min(1, { message: "Kullanıcı adı veya e-posta giriniz." }),
-    password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
-});
+const resetPasswordSchema = z
+    .object({
+        new_password: z.string().min(8, { message: "Yeni şifre en az 8 karakter olmalıdır." }),
+        confirm_password: z.string().min(8, { message: "Yeni şifre (tekrar) en az 8 karakter olmalıdır." }),
+    })
+    .refine((data) => data.new_password === data.confirm_password, {
+        message: "Şifreler eşleşmiyor.",
+        path: ["confirm_password"],
+    });
 
-export default function LoginPage() {
-    const [showPassword, setShowPassword] = useState(false);
-    const [login, { isLoading }] = useLoginMutation();
-    const [triggerGetProfile] = useLazyGetProfileQuery();
-    const dispatch = useAppDispatch();
+export default function ResetPasswordPage() {
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [resetPassword, { isLoading: isSubmitting }] = useResetPasswordMutation();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const targetEmail = searchParams.get("email")?.trim() ?? "";
     const { data: logoContentData, isLoading: isLogoQueryLoading, isFetching: isLogoQueryFetching } =
         useGetWebpageContentsQuery({ ordering: "-created_at" });
     const isLogoLoading = isLogoQueryLoading || isLogoQueryFetching;
@@ -49,62 +51,39 @@ export default function LoginPage() {
     );
     const dynamicLogo = logoContent?.logo_url?.trim() ? logoContent.logo_url : "/logo.webp";
 
-    // Initialize React Hook Form
-    const form = useForm({
-        resolver: zodResolver(loginSchema),
+    const form = useForm<z.infer<typeof resetPasswordSchema>>({
+        resolver: zodResolver(resetPasswordSchema),
         defaultValues: {
-            username_or_email: "",
-            password: "",
+            new_password: "",
+            confirm_password: "",
         },
     });
 
-    const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+    const handleResetPassword = async (values: z.infer<typeof resetPasswordSchema>) => {
+        if (!targetEmail) {
+            toast.error("Hata oluştu");
+            return;
+        }
+
+        const newPassword = values.new_password;
+        const confirmPassword = values.confirm_password;
+
         try {
-            const response = await login({
-                username_or_email: values.username_or_email,
-                password: values.password,
+            await resetPassword({
+                email: targetEmail,
+                new_password: newPassword,
+                confirm_password: confirmPassword,
             }).unwrap();
 
-            // Save tokens to localStorage
-            localStorage.setItem("access", response.access);
-            localStorage.setItem("refresh", response.refresh);
-            localStorage.setItem("expires_time", String(response.expires_time));
-
-            // Fetch profile to determine user_type for redirect
-            const profileResult = await triggerGetProfile().unwrap();
-            const userType = profileResult?.user_type;
-            dispatch(
-                setAuthSession({
-                    user: {
-                        email: profileResult.email,
-                        username: profileResult.username,
-                        first_name: profileResult.first_name,
-                        last_name: profileResult.last_name,
-                        user_type: profileResult.user_type,
-                    },
-                    token: response.access,
-                })
-            );
-
-            if (userType === "admin") {
-                toast.success("Giriş başarılı! Dashboard'a yönlendiriliyorsunuz...");
-                router.push("/dashboard");
-                router.refresh();
-            } else {
-                toast.success("Giriş başarılı, yönlendiriliyorsunuz...");
-                router.push("/");
-                router.refresh();
-            }
+            toast.success("Şifreniz başarıyla güncellendi");
+            router.push("/login");
         } catch (error: any) {
-            console.error("Login Error:", error);
-            // Default error message, you can map different status codes if needed
-            toast.error(error?.data?.detail || "Kullanıcı adı veya şifre hatalı.");
+            toast.error(error?.data?.message || error?.data?.detail || "Hata oluştu");
         }
     };
 
     return (
         <div className="min-h-screen w-full bg-[#FAFBFF] flex flex-col items-center justify-center p-4">
-            {/* Login Card */}
             <Card className="w-full max-w-[450px] bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-none px-4 py-6 sm:px-8 sm:py-10">
                 <CardHeader className="flex flex-col items-center p-0 mb-8 space-y-4">
                     <div>
@@ -121,51 +100,35 @@ export default function LoginPage() {
                     </div>
 
                     <div className="text-center -mt-4">
+                        <h1 className="text-xl font-bold text-slate-800 mb-1">Şifreyi Yenile</h1>
                         <p className="text-sm text-slate-400">
-                            Giriş yaparak öğrenmeye başlayın.
+                            Yeni şifrenizi belirleyerek hesabınıza güvenle devam edin.
                         </p>
                     </div>
                 </CardHeader>
 
                 <CardContent className="p-0">
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        <form onSubmit={form.handleSubmit(handleResetPassword)} className="space-y-6">
+                            <FormItem className="space-y-2">
+                                <FormLabel className="text-sm font-semibold text-slate-700">E-posta</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        type="text"
+                                        value={targetEmail}
+                                        disabled
+                                        className="h-12 rounded-xl bg-slate-50 border-slate-200 text-slate-500"
+                                    />
+                                </FormControl>
+                            </FormItem>
 
-                            {/* Username or Email Field */}
                             <FormField
                                 control={form.control}
-                                name="username_or_email"
+                                name="new_password"
                                 render={({ field }) => (
                                     <FormItem className="space-y-2">
                                         <FormLabel className="text-sm font-semibold text-slate-700">
-                                            Kullanıcı Adı veya E-posta
-                                        </FormLabel>
-                                        <FormControl>
-                                            <div className="relative">
-                                                <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
-                                                    <Mail className="h-5 w-5 text-slate-400" />
-                                                </div>
-                                                <Input
-                                                    type="text"
-                                                    placeholder="Kullanıcı Adı veya E-posta"
-                                                    className="pl-11 h-12 rounded-xl bg-transparent border-slate-200 focus-visible:ring-[#1A3EB1]/20 focus-visible:border-[#1A3EB1]"
-                                                    {...field}
-                                                />
-                                            </div>
-                                        </FormControl>
-                                        <FormMessage className="text-xs" />
-                                    </FormItem>
-                                )}
-                            />
-
-                            {/* Password Field */}
-                            <FormField
-                                control={form.control}
-                                name="password"
-                                render={({ field }) => (
-                                    <FormItem className="space-y-2">
-                                        <FormLabel className="text-sm font-semibold text-slate-700">
-                                            Şifre
+                                            Yeni Şifre
                                         </FormLabel>
                                         <FormControl>
                                             <div className="relative">
@@ -173,17 +136,17 @@ export default function LoginPage() {
                                                     <Lock className="h-5 w-5 text-slate-400" />
                                                 </div>
                                                 <Input
-                                                    type={showPassword ? "text" : "password"}
+                                                    type={showNewPassword ? "text" : "password"}
                                                     placeholder="••••••••"
                                                     className="pl-11 pr-11 h-12 rounded-xl bg-transparent border-slate-200 focus-visible:ring-[#1A3EB1]/20 focus-visible:border-[#1A3EB1]"
                                                     {...field}
                                                 />
                                                 <button
                                                     type="button"
-                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    onClick={() => setShowNewPassword(!showNewPassword)}
                                                     className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 focus:outline-none"
                                                 >
-                                                    {showPassword ? (
+                                                    {showNewPassword ? (
                                                         <EyeOff className="h-5 w-5" />
                                                     ) : (
                                                         <Eye className="h-5 w-5" />
@@ -196,29 +159,55 @@ export default function LoginPage() {
                                 )}
                             />
 
-                            {/* Forgot Password Link */}
-                            <div className="flex justify-end">
-                                <Link
-                                    href="/forgot-password"
-                                    className="text-xs font-semibold text-[#1A3EB1] hover:underline"
-                                >
-                                    Şifremi Unuttum?
-                                </Link>
-                            </div>
+                            <FormField
+                                control={form.control}
+                                name="confirm_password"
+                                render={({ field }) => (
+                                    <FormItem className="space-y-2">
+                                        <FormLabel className="text-sm font-semibold text-slate-700">
+                                            Yeni Şifre (Tekrar)
+                                        </FormLabel>
+                                        <FormControl>
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+                                                    <Lock className="h-5 w-5 text-slate-400" />
+                                                </div>
+                                                <Input
+                                                    type={showConfirmPassword ? "text" : "password"}
+                                                    placeholder="••••••••"
+                                                    className="pl-11 pr-11 h-12 rounded-xl bg-transparent border-slate-200 focus-visible:ring-[#1A3EB1]/20 focus-visible:border-[#1A3EB1]"
+                                                    {...field}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                    className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                                                >
+                                                    {showConfirmPassword ? (
+                                                        <EyeOff className="h-5 w-5" />
+                                                    ) : (
+                                                        <Eye className="h-5 w-5" />
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </FormControl>
+                                        <FormMessage className="text-xs" />
+                                    </FormItem>
+                                )}
+                            />
 
-                            {/* Submit Button */}
                             <Button
                                 type="submit"
-                                disabled={isLoading}
+                                disabled={isSubmitting || !targetEmail}
                                 className="w-full h-12 bg-[#1A3EB1] hover:bg-[#1A3EB1]/90 text-white rounded-xl font-medium text-[15px] shadow-sm transition-all"
                             >
-                                {isLoading ? (
+                                {isSubmitting ? (
                                     <>
                                         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                        Giriş Yapılıyor...
+                                        Güncelleniyor...
                                     </>
                                 ) : (
-                                    "Giriş Yap"
+                                    "Şifreyi Güncelle"
                                 )}
                             </Button>
                         </form>
@@ -226,26 +215,10 @@ export default function LoginPage() {
                 </CardContent>
             </Card>
 
-            {/* Footer Links & Signup */}
-            <div className="mt-8 text-center space-y-6">
-                <p className="text-sm text-slate-500">
-                    Hesabınız yok mu?{" "}
-                    <Link href="/register" className="font-bold text-[#1A3EB1] hover:underline">
-                        Ücretsiz kaydolun
-                    </Link>
-                </p>
-
-                <div className="flex items-center justify-center gap-6 text-xs font-medium text-slate-400">
-                    <Link href="#" className="hover:text-slate-600 transition-colors">
-                        Hakkımızda
-                    </Link>
-                    <Link href="#" className="hover:text-slate-600 transition-colors">
-                        Gizlilik
-                    </Link>
-                    <Link href="#" className="hover:text-slate-600 transition-colors">
-                        Yardım
-                    </Link>
-                </div>
+            <div className="mt-8 text-center">
+                <Link href="/login" className="text-sm font-semibold text-[#1A3EB1] hover:underline">
+                    Giriş Sayfasına Dön
+                </Link>
             </div>
         </div>
     );

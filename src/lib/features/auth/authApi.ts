@@ -25,6 +25,26 @@ export interface RegisterResponse {
     message?: string;
 }
 
+export interface ForgotPasswordRequest {
+    username_or_email: string;
+}
+
+export interface ForgotPasswordResponse {
+    message?: string;
+    detail?: string;
+}
+
+export interface ResetPasswordRequest {
+    email: string;
+    new_password: string;
+    confirm_password: string;
+}
+
+export interface ResetPasswordResponse {
+    message?: string;
+    detail?: string;
+}
+
 export interface UserProfileResponse {
     id?: number;
     email: string;
@@ -127,6 +147,20 @@ export const authApi = createApi({
                     response.status === 200 || response.status === 201 || (!response.status && result),
             }),
         }),
+        forgotPassword: builder.mutation<ForgotPasswordResponse, ForgotPasswordRequest>({
+            query: (payload) => ({
+                url: 'users/forgot-password/',
+                method: 'POST',
+                body: payload,
+            }),
+        }),
+        resetPassword: builder.mutation<ResetPasswordResponse, ResetPasswordRequest>({
+            query: (payload) => ({
+                url: 'users/reset-password/',
+                method: 'POST',
+                body: payload,
+            }),
+        }),
         getProfile: builder.query<UserProfileResponse, void>({
             query: () => 'users/profile/',
             providesTags: ['Profile'],
@@ -194,4 +228,19 @@ export const authApi = createApi({
     }),
 });
 
-export const { useLoginMutation, useRegisterMutation, useGetProfileQuery, useLazyGetProfileQuery, useEditProfileMutation, useGetStudentDashboardQuery, useGetMyCourseOrdersQuery, useGetMyDigitalProductsOrderQuery, useGetAddressQuery, useCreateAddressMutation, useUpdateAddressMutation, useDeleteAddressMutation } = authApi;
+export const {
+    useLoginMutation,
+    useRegisterMutation,
+    useForgotPasswordMutation,
+    useResetPasswordMutation,
+    useGetProfileQuery,
+    useLazyGetProfileQuery,
+    useEditProfileMutation,
+    useGetStudentDashboardQuery,
+    useGetMyCourseOrdersQuery,
+    useGetMyDigitalProductsOrderQuery,
+    useGetAddressQuery,
+    useCreateAddressMutation,
+    useUpdateAddressMutation,
+    useDeleteAddressMutation,
+} = authApi;

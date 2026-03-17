@@ -63,10 +63,10 @@ export default function BlogPostDetailPage({ params }: { params: Promise<PagePar
             <div className="min-h-screen bg-white flex items-center justify-center px-6">
                 <div className="text-center">
                     <p className="text-lg text-slate-600 font-medium mb-4">
-                        {!identifier ? "Gecerli bir yazi kimligi bulunamadi." : "Blog yazisi yuklenemedi."}
+                        {!identifier ? "Gecerli bir yazi kimligi bulunamadi." : "Bilgi deposu yazısı yuklenemedi."}
                     </p>
-                    <Link href="/blog" className="text-[#1e3a8a] font-semibold hover:underline">
-                        Blog listesine don
+                    <Link href="/bilgi-deposu" className="text-[#1e3a8a] font-semibold hover:underline">
+                        Bilgi deposu listesine don
                     </Link>
                 </div>
             </div>
@@ -79,9 +79,9 @@ export default function BlogPostDetailPage({ params }: { params: Promise<PagePar
                 <nav className="py-4 mb-6 border-b border-gray-100 text-sm font-medium flex items-center text-[#1e3a8a]">
                     <Link href="/" className="hover:opacity-80 transition-opacity">Ana Sayfa</Link>
                     <ChevronRight className="w-4 h-4 mx-2 text-gray-400" />
-                    <Link href="/blog" className="hover:opacity-80 transition-opacity">Blog</Link>
+                    <Link href="/bilgi-deposu" className="hover:opacity-80 transition-opacity">Bilgi Deposu</Link>
                     <ChevronRight className="w-4 h-4 mx-2 text-gray-400" />
-                    <span className="truncate">Yazi Detay</span>
+                    <span className="truncate">Bilgi Deposu Detay</span>
                 </nav>
 
                 <section className="max-w-4xl mx-auto mt-8 mb-12 px-4 text-center">

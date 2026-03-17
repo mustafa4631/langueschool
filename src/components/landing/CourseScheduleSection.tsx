@@ -69,7 +69,7 @@ const getCourseStatus = (course: Course) => {
 
     if (remaining <= 3) {
         return {
-            text: `Son ${remaining} Kişilik Yer`,
+            text: `Son ${remaining} Kontenjan`,
             badgeClass: "bg-red-50 text-red-700 border-red-200",
             isFull: false,
         };
@@ -154,7 +154,7 @@ function CourseColumn({ courses, isLoading, title, icon }: CourseColumnProps) {
                                                 className={`w-full sm:w-auto ${isOnline ? "" : "text-white"}`}
                                             >
                                                 <Link href={buildCourseDetailPath(course)}>
-                                                    Hemen Başvur
+                                                    Başvur
                                                 </Link>
                                             </Button>
                                         )}
@@ -196,7 +196,7 @@ export function CourseScheduleSection() {
             <div className="container mx-auto px-4 md:px-6">
                 <div className="mb-12 text-center">
                     <h2 className="text-3xl font-bold tracking-tight text-primary sm:text-4xl mb-4">
-                        Gelecek Kurs Dönemleri
+                        En Yakın Zamanda Açılacak Kurslarımız
                     </h2>
                     <p className="text-muted-foreground">
                         Hedefinize uygun kursu seçin ve Almanca yolculuğunuza bugün başlayın.

@@ -8,7 +8,7 @@ import {
     LayoutDashboard,
     BookOpen,
     Users,
-    FileText,
+    Wallpaper,
     MonitorPlay,
     PenTool,
     MessageSquare,
@@ -19,7 +19,9 @@ import {
     ChevronDown,
     ShoppingCart,
     User,
-    LifeBuoy
+    LifeBuoy,
+    GraduationCap,
+    BookMarked
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -69,6 +71,9 @@ const navItems: NavItem[] = [
     },
     { name: "Siparişler", href: "/dashboard/orders/digital-products", icon: ShoppingCart },
     { name: "Öğrenci Yorumları", href: "/dashboard/students-reviews", icon: MessageSquare },
+    { name: "Web İçerikleri", href: "/dashboard/web-contents", icon: Wallpaper },
+    { name: "Kurs Banner", href: "/dashboard/courses-banners", icon: GraduationCap },
+    { name: "Sertifikalar", href: "/dashboard/certificates", icon: BookMarked },
     { name: "Destek Talepleri", href: "/dashboard/support", icon: LifeBuoy },
 ];
 

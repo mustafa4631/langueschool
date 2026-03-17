@@ -10,6 +10,7 @@ import {
     CarouselNext,
     CarouselPrevious,
 } from "@/components/ui/carousel";
+import { useGetCertificatesQuery } from "@/lib/features/blog/blogApi";
 
 const CERTIFICATE_IMAGES = [
     "/sertifika1.webp",
@@ -24,16 +25,36 @@ const CERTIFICATE_IMAGES = [
 export function StudentCertificatesSlider() {
     const [api, setApi] = useState<CarouselApi>();
     const [selectedIndex, setSelectedIndex] = useState(0);
-    const [snapCount, setSnapCount] = useState(0);
+    const {
+        data: certificateData,
+        isError: isCertificateError,
+    } = useGetCertificatesQuery({ ordering: "-created_at" });
+
+    const normalizeImageUrl = (urlValue: string | null | undefined) => {
+        if (!urlValue) return "";
+        if (urlValue.startsWith("http://") || urlValue.startsWith("https://")) return urlValue;
+        return `${process.env.NEXT_PUBLIC_API_URL}${urlValue}`;
+    };
+
+    const apiCertificates = (certificateData?.results ?? [])
+        .map((item) => normalizeImageUrl(item.image_url))
+        .filter(Boolean);
+
+    const activeCertificates =
+        !isCertificateError && apiCertificates.length > 0 ? apiCertificates : CERTIFICATE_IMAGES;
+    const dotCount = activeCertificates.length;
+    const hasMultipleCertificates = dotCount > 1;
+    const carouselKey = `${apiCertificates.length > 0 ? "api" : "default"}-${dotCount}`;
 
     useEffect(() => {
         if (!api) return;
 
         const onSelect = () => {
-            setSelectedIndex(api.selectedScrollSnap());
+            const rawIndex = api.selectedScrollSnap();
+            const normalizedIndex = dotCount > 0 ? rawIndex % dotCount : 0;
+            setSelectedIndex(normalizedIndex);
         };
 
-        setSnapCount(api.scrollSnapList().length);
         onSelect();
         api.on("select", onSelect);
         api.on("reInit", onSelect);
@@ -42,16 +63,22 @@ export function StudentCertificatesSlider() {
             api.off("select", onSelect);
             api.off("reInit", onSelect);
         };
-    }, [api]);
+    }, [api, dotCount]);
 
     useEffect(() => {
-        if (!api) return;
+        if (selectedIndex >= dotCount) {
+            setSelectedIndex(0);
+        }
+    }, [selectedIndex, dotCount]);
+
+    useEffect(() => {
+        if (!api || !hasMultipleCertificates) return;
         const interval = setInterval(() => {
             api.scrollNext();
         }, 3500);
 
         return () => clearInterval(interval);
-    }, [api]);
+    }, [api, hasMultipleCertificates]);
 
     const preventDefault = (event: React.SyntheticEvent) => {
         event.preventDefault();
@@ -68,12 +95,13 @@ export function StudentCertificatesSlider() {
 
                 <div className="relative rounded-[28px] bg-white/60 p-4 shadow-sm backdrop-blur-[2px] md:p-6">
                     <Carousel
+                        key={carouselKey}
                         setApi={setApi}
-                        opts={{ loop: true, align: "start" }}
+                        opts={{ loop: hasMultipleCertificates, align: "start" }}
                         className="w-full select-none"
                     >
                         <CarouselContent>
-                            {CERTIFICATE_IMAGES.map((src, index) => (
+                            {activeCertificates.map((src, index) => (
                                 <CarouselItem key={src} className="basis-full md:basis-1/2 lg:basis-1/4">
                                     <div
                                         className="group relative overflow-hidden rounded-[24px] border-2 border-white bg-white shadow-md transition-all duration-300 hover:scale-[1.03] hover:shadow-xl"
@@ -98,21 +126,27 @@ export function StudentCertificatesSlider() {
                             ))}
                         </CarouselContent>
 
-                        <CarouselPrevious className="left-2 h-10 w-10 border-slate-200 bg-white/90 text-primary shadow-sm hover:bg-white" />
-                        <CarouselNext className="right-2 h-10 w-10 border-slate-200 bg-white/90 text-primary shadow-sm hover:bg-white" />
+                        {hasMultipleCertificates && (
+                            <>
+                                <CarouselPrevious className="left-2 h-10 w-10 border-slate-200 bg-white/90 text-primary shadow-sm hover:bg-white" />
+                                <CarouselNext className="right-2 h-10 w-10 border-slate-200 bg-white/90 text-primary shadow-sm hover:bg-white" />
+                            </>
+                        )}
                     </Carousel>
 
-                    <div className="mt-6 flex items-center justify-center gap-2">
-                        {Array.from({ length: snapCount }).map((_, index) => (
-                            <button
-                                key={index}
-                                type="button"
-                                onClick={() => api?.scrollTo(index)}
-                                className={`h-2.5 rounded-full transition-all ${selectedIndex === index ? "w-6 bg-primary" : "w-2.5 bg-slate-300 hover:bg-slate-400"}`}
-                                aria-label={`Sertifika slaytı ${index + 1}`}
-                            />
-                        ))}
-                    </div>
+                    {hasMultipleCertificates && (
+                        <div className="mt-6 flex items-center justify-center gap-2">
+                            {Array.from({ length: dotCount }).map((_, index) => (
+                                <button
+                                    key={index}
+                                    type="button"
+                                    onClick={() => api?.scrollTo(index)}
+                                    className={`h-2.5 rounded-full transition-all ${selectedIndex === index ? "w-6 bg-primary" : "w-2.5 bg-slate-300 hover:bg-slate-400"}`}
+                                    aria-label={`Sertifika slaytı ${index + 1}`}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </section>

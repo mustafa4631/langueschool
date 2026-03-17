@@ -3,20 +3,59 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, ShoppingCart } from "lucide-react";
+import { Loader2, PlayCircle, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useGetCourseListQuery } from "@/lib/features/course/courseApi";
+import { useGetStudentReviewsQuery } from "@/lib/features/users/userApi";
+import { CourseFeaturesSlider } from "@/components/course/CourseFeaturesSlider";
 import { useAppDispatch } from "@/lib/hooks";
 import { addToCart } from "@/lib/features/cart/cartSlice";
 import toast from "react-hot-toast";
+
+const featureGallery = [
+    "/k1.webp",
+    "/k2.webp",
+    "/k3.webp",
+    "/k4.webp",
+    "/k5.webp",
+    "/k6.webp",
+];
+
+const getVideoId = (videoId?: string, youtubeUrl?: string) => {
+    if (videoId?.trim()) return videoId.trim();
+    if (!youtubeUrl) return "";
+
+    try {
+        const parsedUrl = new URL(youtubeUrl);
+        if (parsedUrl.hostname.includes("youtu.be")) {
+            return parsedUrl.pathname.replace("/", "");
+        }
+
+        if (parsedUrl.searchParams.get("v")) {
+            return parsedUrl.searchParams.get("v") || "";
+        }
+
+        if (parsedUrl.pathname.includes("/shorts/")) {
+            return parsedUrl.pathname.split("/shorts/")[1]?.split("/")[0] || "";
+        }
+    } catch {
+        return "";
+    }
+
+    return "";
+};
 
 export default function OfflineCoursesPage() {
     const router = useRouter();
     const dispatch = useAppDispatch();
     const { data: coursesData, isLoading, error } = useGetCourseListQuery({ type: "offline" });
     const offlineCourses = coursesData?.results || [];
+    const { data: studentReviewsData } = useGetStudentReviewsQuery({});
+    const allReviews = studentReviewsData?.results || [];
+    const videoSnippets = allReviews.filter((review) => review.type === "lesson");
+    const studentThoughts = allReviews.filter((review) => review.type === "think");
 
     const formatCurrency = (amount: string | number) =>
         new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2 }).format(Number(amount));
@@ -59,9 +98,6 @@ export default function OfflineCoursesPage() {
                     <h1 className="text-3xl md:text-5xl font-extrabold text-[#1a365d] mb-4">
                         Offline (Kayıtlı) Almanca Kursları
                     </h1>
-                    <p className="text-lg text-slate-600 max-w-3xl">
-                        Yüz yüze sınıf deneyimi ile kayıtlı offline Almanca kurslarımızı inceleyin ve hemen kaydınızı oluşturun.
-                    </p>
                 </div>
 
                 {isLoading ? (
@@ -161,6 +197,96 @@ export default function OfflineCoursesPage() {
                         })}
                     </div>
                 )}
+
+                <section className="py-16">
+                    <CourseFeaturesSlider fallbackImages={featureGallery} />
+                </section>
+
+                <section className="py-16 space-y-16">
+                    <div>
+                        <div className="mb-8 text-center">
+                            <h2 className="text-[#1a365d] text-3xl md:text-4xl font-black">Derslerimizden Kesitler</h2>
+                        </div>
+
+                        {videoSnippets.length > 0 ? (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {videoSnippets.map((item) => {
+                                    const videoId = getVideoId(item.video_id, item.youtube_url);
+                                    if (!videoId) return null;
+
+                                    return (
+                                        <a
+                                            key={item.id}
+                                            href={`https://www.youtube.com/watch?v=${videoId}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="group relative block overflow-hidden rounded-3xl border border-white/40 bg-white/70 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+                                        >
+                                            <div className="relative aspect-video w-full">
+                                                <Image
+                                                    src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+                                                    alt={item.name || "Ders videosu"}
+                                                    fill
+                                                    className="object-cover"
+                                                />
+                                                <div className="absolute inset-0 bg-black/25 transition-colors group-hover:bg-black/35" />
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <PlayCircle className="h-14 w-14 text-white drop-shadow-lg" />
+                                                </div>
+                                            </div>
+                                        </a>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+                                Derslerimizden kesit videosu bulunamadı.
+                            </div>
+                        )}
+                    </div>
+
+                    <div>
+                        <div className="mb-8 text-center">
+                            <h2 className="text-[#1a365d] text-3xl md:text-4xl font-black">Öğrencilerimizin Düşünceleri</h2>
+                        </div>
+
+                        {studentThoughts.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {studentThoughts.map((item) => {
+                                    const videoId = getVideoId(item.video_id, item.youtube_url);
+                                    if (!videoId) return null;
+
+                                    return (
+                                        <a
+                                            key={item.id}
+                                            href={`https://www.youtube.com/watch?v=${videoId}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="group relative block overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                                        >
+                                            <div className="relative aspect-9/16 w-full">
+                                                <Image
+                                                    src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+                                                    alt={item.name || "Öğrenci yorumu videosu"}
+                                                    fill
+                                                    className="object-cover"
+                                                />
+                                                <div className="absolute inset-0 bg-black/25 transition-colors group-hover:bg-black/35" />
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <PlayCircle className="h-12 w-12 text-white drop-shadow-lg" />
+                                                </div>
+                                            </div>
+                                        </a>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+                                Öğrenci yorumu videosu bulunamadı.
+                            </div>
+                        )}
+                    </div>
+                </section>
             </main>
         </div>
     );

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { LogIn, User, ShoppingBag, Minus, Plus, Trash2, Menu, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -20,7 +21,11 @@ import { clearCart, removeFromCart, selectCartCount, selectCartItems, selectCart
 import { clearAuthSession, selectAuthUser, selectIsAuthenticated, selectIsAuthInitialized, setAuthSession } from "@/lib/features/auth/authSessionSlice";
 import { useLazyGetProfileQuery } from "@/lib/features/auth/authApi";
 
-export function Header() {
+type HeaderProps = {
+    logoSrc?: string;
+};
+
+export function Header({ logoSrc = "/logo.webp" }: HeaderProps) {
     const router = useRouter();
     const pathname = usePathname();
     const dispatch = useAppDispatch();
@@ -48,7 +53,7 @@ export function Header() {
     const mobileNavLinks = [
         { label: "Offline Kurslar", href: "/kurslar/offline-almanca-kursu" },
         { label: "Dijital Eserler", href: "/dijital-eserler" },
-        { label: "Blog", href: "/blog" },
+        { label: "Bilgi Deposu", href: "/bilgi-deposu" },
         { label: "SSS", href: "/sikca-sorulan-sorular" },
         { label: "Bilgi Al", href: "/bilgi-al" },
     ];
@@ -142,17 +147,25 @@ export function Header() {
     }, [pathname]);
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-            <div className="container mx-auto flex h-24 items-center justify-between px-4 md:px-6">
+        <header className="sticky top-0 z-100 w-full border-b bg-white">
+            <div className="container mx-auto flex h-28 items-center justify-between px-4 md:px-6">
                 <Link href="/" className="flex items-center">
-                    <Image
-                        src="/logo.webp"
-                        alt="Alman Akademisi Logo"
-                        width={200}
-                        height={100}
-                        className="h-24 w-auto object-contain"
-                        priority
-                    />
+                    {logoSrc.startsWith("http://") || logoSrc.startsWith("https://") ? (
+                        <img
+                            src={logoSrc}
+                            alt="Alman Akademisi Logo"
+                            className="h-24 w-auto object-contain"
+                        />
+                    ) : (
+                        <Image
+                            src={logoSrc}
+                            alt="Alman Akademisi Logo"
+                            width={180}
+                            height={90}
+                            className="h-24 w-auto object-contain"
+                            priority
+                        />
+                    )}
                 </Link>
 
                 <nav className="hidden lg:flex items-center gap-2 text-sm font-medium">
@@ -194,11 +207,28 @@ export function Header() {
 
                     <Link href="/kurslar/offline-almanca-kursu" className="hover:text-primary px-3 py-2 transition-colors">Offline (Kayıtlı) Almanca Kursları</Link>
                     <Link href="/dijital-eserler" className="hover:text-primary px-3 py-2 transition-colors">Dijital Eserler</Link>
-                    <Link href="/blog" className="hover:text-primary px-3 py-2 transition-colors">Blog</Link>
+                    <Link href="/bilgi-deposu" className="hover:text-primary px-3 py-2 transition-colors">Bilgi Deposu</Link>
                     <Link href="/sikca-sorulan-sorular" className="hover:text-primary px-3 py-2 transition-colors">SSS</Link>
                 </nav>
 
                 <div className="flex items-center gap-3">
+                    {isAuthInitialized && (
+                        isAuthenticated ? (
+                            <Button variant="ghost" size="sm" className="flex sm:hidden px-3 py-1.5 text-sm font-medium items-center gap-1" asChild>
+                                <Link href={isStudent ? "/profile" : "/dashboard"}>
+                                    <User className="w-4 h-4" />
+                                    Profil
+                                </Link>
+                            </Button>
+                        ) : (
+                            <Button variant="ghost" size="sm" className="flex sm:hidden px-3 py-1.5 text-sm font-medium items-center gap-1" asChild>
+                                <Link href="/login">
+                                    <LogIn className="w-4 h-4" />
+                                    Giriş Yap
+                                </Link>
+                            </Button>
+                        )
+                    )}
                     <Button
                         type="button"
                         variant="ghost"
@@ -352,88 +382,94 @@ export function Header() {
                 </div>
             </div>
 
-            <div
-                className={`fixed inset-0 lg:hidden ${
-                    isMobileMenuOpen ? "pointer-events-auto" : "pointer-events-none"
-                }`}
-                style={{ zIndex: 9999 }}
-                aria-hidden={!isMobileMenuOpen}
-            >
-                <aside
-                    className={`fixed inset-0 h-screen w-screen bg-white shadow-2xl transition-transform duration-300 ease-out ${
-                        isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
-                    }`}
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label="Mobil navigasyon"
-                >
-                    <div className="flex h-20 items-center justify-between border-b border-slate-200 bg-white px-5">
-                        <Link href="/" className="flex items-center" onClick={() => setIsMobileMenuOpen(false)}>
-                            <Image
-                                src="/logo.webp"
-                                alt="Alman Akademisi Logo"
-                                width={150}
-                                height={80}
-                                className="h-14 w-auto object-contain"
-                            />
-                        </Link>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Mobil menuyu kapat"
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            <X className="h-5 w-5" />
-                        </Button>
-                    </div>
-
-                    <nav className="flex flex-col gap-8 px-6 py-8">
-                        <div className="border-b border-slate-200 pb-4">
-                            <button
-                                type="button"
-                                className="flex w-full items-center justify-between text-left text-xl font-semibold text-slate-800 transition-colors hover:text-[#1e3a8a]"
-                                onClick={() => setIsOnlineOpen((prev) => !prev)}
-                                aria-expanded={isOnlineOpen}
-                                aria-controls="mobile-online-kurslar"
-                            >
-                                <span>Online Kurslar</span>
-                                {isOnlineOpen ? (
-                                    <ChevronUp className="h-5 w-5 shrink-0" />
+            <AnimatePresence>
+                {isMobileMenuOpen && (
+                    <motion.aside
+                        className="fixed inset-0 z-9999 overflow-y-auto bg-white lg:hidden"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Mobil navigasyon"
+                        initial={{ x: "100%" }}
+                        animate={{ x: 0 }}
+                        exit={{ x: "100%" }}
+                        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                    >
+                        <div className="flex h-20 items-center justify-between border-b border-slate-200 bg-white px-6">
+                            <Link href="/" className="flex items-center" onClick={() => setIsMobileMenuOpen(false)}>
+                                {logoSrc.startsWith("http://") || logoSrc.startsWith("https://") ? (
+                                    <img
+                                        src={logoSrc}
+                                        alt="Alman Akademisi Logo"
+                                        className="h-14 w-auto object-contain"
+                                    />
                                 ) : (
-                                    <ChevronDown className="h-5 w-5 shrink-0" />
+                                    <Image
+                                        src={logoSrc}
+                                        alt="Alman Akademisi Logo"
+                                        width={150}
+                                        height={80}
+                                        className="h-14 w-auto object-contain"
+                                    />
                                 )}
-                            </button>
-
-                            {isOnlineOpen && (
-                                <div id="mobile-online-kurslar" className="ml-4 mt-4 space-y-1 border-l border-slate-200 pl-4">
-                                    {onlineCourseLinks.map((course) => (
-                                        <Link
-                                            key={course.label}
-                                            href={course.href}
-                                            onClick={() => setIsMobileMenuOpen(false)}
-                                            className="block py-3 text-base font-medium text-slate-700 transition-colors hover:text-[#1e3a8a]"
-                                        >
-                                            {course.label}
-                                        </Link>
-                                    ))}
-                                </div>
-                            )}
+                            </Link>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Mobil menuyu kapat"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                <X className="h-5 w-5" />
+                            </Button>
                         </div>
 
-                        {mobileNavLinks.map((item) => (
-                            <Link
-                                key={item.label}
-                                href={item.href}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className="border-b border-slate-200 pb-4 text-xl font-semibold text-slate-800 transition-colors hover:text-[#1e3a8a]"
-                            >
-                                {item.label}
-                            </Link>
-                        ))}
-                    </nav>
-                </aside>
-            </div>
+                        <nav className="flex flex-col gap-8 px-6 py-8">
+                            <div className="border-b border-slate-200 pb-4">
+                                <button
+                                    type="button"
+                                    className="flex w-full items-center justify-between text-left text-xl font-semibold text-slate-800 transition-colors hover:text-[#1e3a8a]"
+                                    onClick={() => setIsOnlineOpen((prev) => !prev)}
+                                    aria-expanded={isOnlineOpen}
+                                    aria-controls="mobile-online-kurslar"
+                                >
+                                    <span>Online Kurslar</span>
+                                    {isOnlineOpen ? (
+                                        <ChevronUp className="h-5 w-5 shrink-0" />
+                                    ) : (
+                                        <ChevronDown className="h-5 w-5 shrink-0" />
+                                    )}
+                                </button>
+
+                                {isOnlineOpen && (
+                                    <div id="mobile-online-kurslar" className="ml-4 mt-4 space-y-1 border-l border-slate-200 pl-4">
+                                        {onlineCourseLinks.map((course) => (
+                                            <Link
+                                                key={course.label}
+                                                href={course.href}
+                                                onClick={() => setIsMobileMenuOpen(false)}
+                                                className="block py-3 text-base font-medium text-slate-700 transition-colors hover:text-[#1e3a8a]"
+                                            >
+                                                {course.label}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {mobileNavLinks.map((item) => (
+                                <Link
+                                    key={item.label}
+                                    href={item.href}
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="border-b border-slate-200 pb-4 text-xl font-semibold text-slate-800 transition-colors hover:text-[#1e3a8a]"
+                                >
+                                    {item.label}
+                                </Link>
+                            ))}
+                        </nav>
+                    </motion.aside>
+                )}
+            </AnimatePresence>
         </header>
     );
 }

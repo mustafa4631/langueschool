@@ -13,17 +13,24 @@ import {
     CloudUpload,
     Bold,
     Italic,
+    Underline,
+    Strikethrough,
     List,
     ListOrdered,
-    Link as LinkIcon,
-    ImageIcon,
+    Heading1,
+    Heading2,
+    Heading3,
+    Quote,
+    Code2,
+    Undo2,
+    Redo2,
     Maximize,
-    Calendar,
+    Minimize,
     X,
-    ImagePlus,
     Check,
     ChevronsUpDown
 } from "lucide-react";
+import * as z from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +44,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import LinkExtension from '@tiptap/extension-link';
 import ImageExtension from '@tiptap/extension-image';
 import CharacterCount from '@tiptap/extension-character-count';
+import UnderlineExtension from "@tiptap/extension-underline";
 
 export default function NewBlogPostPage() {
     const router = useRouter();
@@ -44,6 +52,8 @@ export default function NewBlogPostPage() {
 
     const [title, setTitle] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [editorContent, setEditorContent] = useState("");
+    const [isEditorFullscreen, setIsEditorFullscreen] = useState(false);
 
     const [uploadImageMutation] = useUploadImageMutation();
     const [createBlogPostMutation] = useCreateBlogPostMutation();
@@ -56,6 +66,11 @@ export default function NewBlogPostPage() {
 
     const [selectedCategories, setSelectedCategories] = useState<{ id: string, name: string }[]>([]);
     const [openCategory, setOpenCategory] = useState(false);
+
+    const richTextSchema = z.string().refine(
+        (value) => value.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0,
+        { message: "Lütfen blog içeriği girin." }
+    );
 
     // Category Web Search Query States & Debounce Logic
     const [categorySearchQuery, setCategorySearchQuery] = useState("");
@@ -154,10 +169,9 @@ export default function NewBlogPostPage() {
             return;
         }
 
-        const editorHtml = editor?.getHTML() || "";
-        // Basic check if editor is empty besides paragraph tags
-        if (!editorHtml || editorHtml === "<p></p>" || editorHtml === "<p></p>" || editorHtml.trim().length === 0) {
-            toast.error("Lütfen blog içeriği girin.");
+        const contentValidation = richTextSchema.safeParse(editorContent);
+        if (!contentValidation.success) {
+            toast.error(contentValidation.error.issues[0]?.message || "Lütfen blog içeriği girin.");
             return;
         }
 
@@ -173,7 +187,7 @@ export default function NewBlogPostPage() {
 
             const payload = {
                 title: title.trim(),
-                content: editorHtml,
+                content: editorContent,
                 categories: categoryIds,
                 tags: tags,
                 image_url: previewUrl,
@@ -207,6 +221,10 @@ export default function NewBlogPostPage() {
         }
     };
 
+    const onEditorUpdate = (content: string) => {
+        setEditorContent(content);
+    };
+
     const editor = useEditor({
         immediatelyRender: false,
         extensions: [
@@ -221,39 +239,19 @@ export default function NewBlogPostPage() {
             ImageExtension.configure({
                 inline: true,
             }),
+            UnderlineExtension,
             CharacterCount,
         ],
         content: '',
+        onUpdate: ({ editor: currentEditor }) => {
+            onEditorUpdate(currentEditor.getHTML());
+        },
         editorProps: {
             attributes: {
                 class: 'w-full min-h-[400px] p-6 text-slate-700 bg-white border-none outline-none focus:ring-0 leading-relaxed font-sans prose max-w-none',
             },
         },
     });
-
-    const setLink = () => {
-        if (!editor) return;
-        const previousUrl = editor.getAttributes('link').href;
-        const url = window.prompt('URL linkini girin:', previousUrl);
-
-        if (url === null) return;
-
-        if (url === '') {
-            editor.chain().focus().extendMarkRange('link').unsetLink().run();
-            return;
-        }
-
-        editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
-    };
-
-    const addImage = () => {
-        if (!editor) return;
-        const url = window.prompt('Görsel URL adresini girin:');
-
-        if (url) {
-            editor.chain().focus().setImage({ src: url }).run();
-        }
-    };
 
     // Fullscreen Layout Protection
     if (isAuthLoading || !token || !isAuthorized || !profile) {
@@ -273,7 +271,7 @@ export default function NewBlogPostPage() {
             />
 
             <main className="w-full lg:ml-72 transition-all duration-300 min-h-screen flex flex-col">
-                <div className="w-full px-4 py-8 pt-[4.5rem] lg:pt-8 flex flex-col flex-1">
+                <div className="w-full px-4 py-8 pt-18 lg:pt-8 flex flex-col flex-1">
                     <div className="max-w-6xl mx-auto flex flex-col gap-8 w-full flex-1">
 
                         {/* Header Block */}
@@ -377,7 +375,10 @@ export default function NewBlogPostPage() {
                                     </div>
 
                                     {/* Rich Text Toolbar Matrix */}
-                                    <div className="flex flex-col border border-slate-200 rounded-xl overflow-hidden mt-2">
+                                    <div
+                                        className={`flex flex-col border border-slate-200 rounded-xl overflow-hidden mt-2 bg-white ${isEditorFullscreen ? "fixed inset-4 z-50 shadow-2xl" : ""
+                                            }`}
+                                    >
                                         {editor && (
                                             <div className="flex items-center gap-1 bg-slate-50 border-b border-slate-200 p-2 overflow-x-auto sticky top-0 z-10">
                                                 <Button
@@ -395,6 +396,47 @@ export default function NewBlogPostPage() {
                                                     className={`h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 ${editor.isActive('italic') ? 'bg-slate-200 text-slate-800' : ''}`}
                                                 >
                                                     <Italic className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => editor.chain().focus().toggleUnderline().run()}
+                                                    className={`h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 ${editor.isActive('underline') ? 'bg-slate-200 text-slate-800' : ''}`}
+                                                >
+                                                    <Underline className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => editor.chain().focus().toggleStrike().run()}
+                                                    className={`h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 ${editor.isActive('strike') ? 'bg-slate-200 text-slate-800' : ''}`}
+                                                >
+                                                    <Strikethrough className="h-4 w-4" />
+                                                </Button>
+                                                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+                                                    className={`h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 ${editor.isActive('heading', { level: 1 }) ? 'bg-slate-200 text-slate-800' : ''}`}
+                                                >
+                                                    <Heading1 className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                                                    className={`h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 ${editor.isActive('heading', { level: 2 }) ? 'bg-slate-200 text-slate-800' : ''}`}
+                                                >
+                                                    <Heading2 className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+                                                    className={`h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 ${editor.isActive('heading', { level: 3 }) ? 'bg-slate-200 text-slate-800' : ''}`}
+                                                >
+                                                    <Heading3 className="h-4 w-4" />
                                                 </Button>
                                                 <div className="w-px h-5 bg-slate-300 mx-1"></div>
                                                 <Button
@@ -417,29 +459,53 @@ export default function NewBlogPostPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={setLink}
-                                                    className={`h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 ${editor.isActive('link') ? 'bg-slate-200 text-slate-800' : ''}`}
+                                                    onClick={() => editor.chain().focus().toggleBlockquote().run()}
+                                                    className={`h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 ${editor.isActive('blockquote') ? 'bg-slate-200 text-slate-800' : ''}`}
                                                 >
-                                                    <LinkIcon className="h-4 w-4" />
+                                                    <Quote className="h-4 w-4" />
                                                 </Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={addImage}
-                                                    className="h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0"
+                                                    onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+                                                    className={`h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 ${editor.isActive('codeBlock') ? 'bg-slate-200 text-slate-800' : ''}`}
                                                 >
-                                                    <ImagePlus className="h-4 w-4" />
+                                                    <Code2 className="h-4 w-4" />
+                                                </Button>
+                                                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => editor.chain().focus().undo().run()}
+                                                    disabled={!editor.can().chain().focus().undo().run()}
+                                                    className="h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 disabled:opacity-40"
+                                                >
+                                                    <Undo2 className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => editor.chain().focus().redo().run()}
+                                                    disabled={!editor.can().chain().focus().redo().run()}
+                                                    className="h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 disabled:opacity-40"
+                                                >
+                                                    <Redo2 className="h-4 w-4" />
                                                 </Button>
                                                 <div className="flex-1"></div>
                                                 <div className="text-xs text-slate-400 font-medium px-2">
                                                     {editor.storage.characterCount?.characters() || 0} Karakter
                                                 </div>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0">
-                                                    <Maximize className="h-4 w-4" />
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setIsEditorFullscreen((prev) => !prev)}
+                                                    className="h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0"
+                                                >
+                                                    {isEditorFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
                                                 </Button>
                                             </div>
                                         )}
-                                        <div className="relative isolate px-6 py-6 pb-4">
+                                        <div className={`relative isolate px-6 py-6 pb-4 ${isEditorFullscreen ? "h-[calc(100vh-8rem)] overflow-y-auto" : ""}`}>
                                             {/* Style string mapping placeholder rendering logic */}
                                             <style jsx global>{`
                                                 .tiptap p.is-editor-empty:first-child::before {
@@ -473,6 +539,27 @@ export default function NewBlogPostPage() {
                                                     color: #1A3EB1;
                                                     cursor: pointer;
                                                     text-decoration: underline;
+                                                }
+                                                .tiptap blockquote {
+                                                    border-left: 3px solid #cbd5e1;
+                                                    padding-left: 1rem;
+                                                    color: #475569;
+                                                    margin: 0.75rem 0;
+                                                }
+                                                .tiptap pre {
+                                                    background: #0f172a;
+                                                    color: #e2e8f0;
+                                                    border-radius: 0.5rem;
+                                                    padding: 0.875rem 1rem;
+                                                    margin: 0.75rem 0;
+                                                    overflow-x: auto;
+                                                }
+                                                .tiptap iframe {
+                                                    width: 100%;
+                                                    min-height: 320px;
+                                                    border: 0;
+                                                    border-radius: 0.5rem;
+                                                    margin: 0.75rem 0;
                                                 }
                                             `}</style>
                                             <EditorContent editor={editor} />

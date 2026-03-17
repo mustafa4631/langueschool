@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -10,6 +10,7 @@ import { Mail, Lock, User, AtSign, RotateCcw, Eye, EyeOff, Loader2 } from "lucid
 import toast from "react-hot-toast";
 import { useRegisterMutation } from "@/lib/features/auth/authApi";
 import { useRouter } from "next/navigation";
+import { useGetWebpageContentsQuery } from "@/lib/features/blog/blogApi";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,15 @@ export default function RegisterPage() {
 
     const [register, { isLoading }] = useRegisterMutation();
     const router = useRouter();
+    const { data: logoContentData, isLoading: isLogoQueryLoading, isFetching: isLogoQueryFetching } =
+        useGetWebpageContentsQuery({ ordering: "-created_at" });
+    const isLogoLoading = isLogoQueryLoading || isLogoQueryFetching;
+
+    const logoContent = useMemo(
+        () => logoContentData?.results?.find((item) => item.type === "logo"),
+        [logoContentData?.results]
+    );
+    const dynamicLogo = logoContent?.logo_url?.trim() ? logoContent.logo_url : "/logo.webp";
 
     // Initialize React Hook Form
     const form = useForm({
@@ -105,7 +115,7 @@ export default function RegisterPage() {
                     <div>
                         <Link href="/">
                             <Image
-                                src="/logo.webp"
+                                src={isLogoLoading ? "/logo.webp" : dynamicLogo}
                                 alt="Alman Akademisi Logo"
                                 width={200}
                                 height={100}
@@ -115,7 +125,7 @@ export default function RegisterPage() {
                         </Link>
                     </div>
 
-                    <div className="text-center -mt-10">
+                    <div className="text-center -mt-4">
                         <h1 className="text-xl font-bold text-slate-800 mb-1">Hesap Oluştur</h1>
                         <p className="text-sm text-slate-400">
                             Hemen kayıt olun ve öğrenmeye başlayın.

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,12 +16,46 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Search, ChevronLeft, ChevronRight, Check, Loader2 } from "lucide-react";
-import { useGetCourseOrdersQuery, useApproveCourseRefundMutation, CourseOrder } from "@/lib/features/orders/ordersApi";
+import { useGetCourseOrdersQuery, useApproveCourseRefundMutation, useSendCourseLinkMutation, CourseOrder } from "@/lib/features/orders/ordersApi";
 import { toast } from "react-hot-toast";
 import { RefundModal } from "../digital-products/RefundModal";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+const sendCourseLinkSchema = z.object({
+    course_link: z
+        .string()
+        .nonempty("Lütfen geçerli bir URL giriniz")
+        .url({ message: "Lütfen geçerli bir URL giriniz" }),
+});
+
+type SendLinkErrorPayload = {
+    status?: string | number;
+    originalStatus?: number;
+    data?: unknown;
+};
+
+const extractSendLinkMessage = (payload: unknown) => {
+    if (!payload) return "";
+
+    if (typeof payload === "string") {
+        try {
+            const parsed = JSON.parse(payload) as { message?: string };
+            return parsed?.message || payload;
+        } catch {
+            return payload;
+        }
+    }
+
+    if (typeof payload === "object" && payload !== null) {
+        const data = payload as { message?: string; detail?: string };
+        return data.message || data.detail || "";
+    }
+
+    return "";
+};
 
 export default function CourseOrdersPage() {
-    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const [page, setPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -30,14 +65,18 @@ export default function CourseOrdersPage() {
     const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
     const [selectedOrderForRefund, setSelectedOrderForRefund] = useState<CourseOrder | null>(null);
     const [approveCourseRefund, { isLoading: isRefundSubmitting }] = useApproveCourseRefundMutation();
+    const [sendCourseLink, { isLoading: isSendingLink }] = useSendCourseLinkMutation();
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+    const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+    const [courseLinkValue, setCourseLinkValue] = useState("");
+    const [courseLinkError, setCourseLinkError] = useState("");
 
     // Additional filter if needed for Course Type (Online/Offline) - using basic search for now 
     // but building the skeleton logic if requested later:
     const [courseTypeFilter, setCourseTypeFilter] = useState("all");
-
-    useEffect(() => {
-        console.log('Current route is /orders/courses, triggering fetch...');
-    }, [pathname]);
+    const isPrivateTab = searchParams.get("orderTabType") === "private";
+    const isPrivateLessonFilter = isPrivateTab;
+    const lessonLinkModalTitle = isPrivateTab ? "Özel Ders Linki Gönder" : "Kurs Linki Gönder";
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -47,8 +86,12 @@ export default function CourseOrdersPage() {
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    const { data: courseOrderResults, isLoading: isOrdersLoading, isFetching, isError } = useGetCourseOrdersQuery(
-        { page, search: debouncedSearch, status: statusFilter, ordering },
+    useEffect(() => {
+        setPage(1);
+    }, [isPrivateLessonFilter]);
+
+    const { data: courseOrderResults, isLoading: isOrdersLoading, isFetching, isError, refetch } = useGetCourseOrdersQuery(
+        { page, search: debouncedSearch, status: statusFilter, ordering, is_private_lesson: isPrivateLessonFilter },
         { refetchOnMountOrArgChange: true }
     );
 
@@ -68,6 +111,72 @@ export default function CourseOrdersPage() {
             window.location.reload();
         } catch (error: any) {
             toast.error(error?.data?.error || error?.data?.message || "İade işlemi sırasında bir hata oluştu.");
+        }
+    };
+
+    const openSendLinkModal = (orderId: number) => {
+        setSelectedOrderId(orderId);
+        setCourseLinkValue("");
+        setCourseLinkError("");
+        setIsLinkModalOpen(true);
+    };
+
+    const sendLinkSubmit = async () => {
+        const parsed = sendCourseLinkSchema.safeParse({ course_link: courseLinkValue.trim() });
+        if (!parsed.success) {
+            setCourseLinkError(parsed.error.issues[0]?.message || "Lütfen geçerli bir URL giriniz");
+            return;
+        }
+
+        if (!selectedOrderId) {
+            toast.error("Sipariş seçimi bulunamadı.");
+            return;
+        }
+
+        try {
+            const result = await sendCourseLink({
+                order_id: selectedOrderId,
+                course_link: parsed.data.course_link,
+            });
+
+            if ("data" in result && result.data) {
+                const successMessage = extractSendLinkMessage(result.data);
+                toast.success(successMessage || "Link başarıyla gönderildi");
+                setIsLinkModalOpen(false);
+                setSelectedOrderId(null);
+                setCourseLinkValue("");
+                setCourseLinkError("");
+                refetch();
+                return;
+            }
+
+            const errorPayload = ("error" in result ? result.error : null) as SendLinkErrorPayload | null;
+            const originalStatus = Number(errorPayload?.originalStatus ?? errorPayload?.status);
+            const errorMessage = extractSendLinkMessage(errorPayload?.data);
+
+            const isParsingSuccess =
+                errorPayload?.status === "PARSING_ERROR" &&
+                [200, 201].includes(originalStatus);
+
+            const isMessageSuccess = /gönderildi|gonderildi|başarıyla|basariyla|success/i.test(errorMessage);
+
+            if (isParsingSuccess || isMessageSuccess) {
+                toast.success(errorMessage || "Link başarıyla gönderildi");
+                setIsLinkModalOpen(false);
+                setSelectedOrderId(null);
+                setCourseLinkValue("");
+                setCourseLinkError("");
+                refetch();
+                return;
+            }
+
+            toast.error(errorMessage || "Link gönderilirken bir hata oluştu.");
+        } catch (error: any) {
+            const fallbackMessage =
+                extractSendLinkMessage(error?.data) ||
+                extractSendLinkMessage(error?.message) ||
+                "Link gönderilirken bir hata oluştu.";
+            toast.error(fallbackMessage);
         }
     };
 
@@ -272,8 +381,12 @@ export default function CourseOrdersPage() {
                             </TableRow>
                         ) : (
                             courseOrderResults?.results?.map((order) => {
+                                const normalizedStatus = order.status?.toLowerCase();
+                                const canSendLink = order.is_link_send === false;
+                                const isOrderEligibleForLink =
+                                    normalizedStatus === "completed" && canSendLink;
                                 const isRefundActionActive =
-                                    order.status?.toLowerCase() === "refund_requested";
+                                    normalizedStatus === "refund_requested";
                                 return (
                                     <TableRow
                                         key={order.id}
@@ -302,23 +415,39 @@ export default function CourseOrdersPage() {
                                             {getStatusBadge(order.status)}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            {isRefundActionActive ? (
-                                                <Button
-                                                    size="sm"
-                                                    className="h-8 px-3 bg-[#1A3EB1] hover:bg-[#1A3EB1]/90 text-white inline-flex items-center gap-1.5"
-                                                    disabled={isRefundSubmitting}
-                                                    onClick={() => {
-                                                        setSelectedOrderForRefund(order);
-                                                        setIsRefundModalOpen(true);
-                                                    }}
-                                                >
-                                                    {isRefundSubmitting && selectedOrderForRefund?.merchant_oid === order.merchant_oid ? (
-                                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                    ) : (
-                                                        <Check className="h-3.5 w-3.5" />
+                                            {isRefundActionActive || isOrderEligibleForLink ? (
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {isOrderEligibleForLink && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-8 px-3 text-xs font-semibold rounded-lg border-[#1A3EB1]/20 text-[#1A3EB1] hover:bg-[#1A3EB1]/5 transition-colors"
+                                                            onClick={() => {
+                                                                openSendLinkModal(order.id);
+                                                            }}
+                                                        >
+                                                            Link Gönder
+                                                        </Button>
                                                     )}
-                                                    İadeyi Onayla
-                                                </Button>
+                                                    {isRefundActionActive && (
+                                                        <Button
+                                                            size="sm"
+                                                            className="h-8 px-3 bg-[#1A3EB1] hover:bg-[#1A3EB1]/90 text-white inline-flex items-center gap-1.5"
+                                                            disabled={isRefundSubmitting}
+                                                            onClick={() => {
+                                                                setSelectedOrderForRefund(order);
+                                                                setIsRefundModalOpen(true);
+                                                            }}
+                                                        >
+                                                            {isRefundSubmitting && selectedOrderForRefund?.merchant_oid === order.merchant_oid ? (
+                                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                            ) : (
+                                                                <Check className="h-3.5 w-3.5" />
+                                                            )}
+                                                            İadeyi Onayla
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <span className="text-slate-300">-</span>
                                             )}
@@ -373,6 +502,55 @@ export default function CourseOrdersPage() {
                 onConfirm={handleCourseRefund}
                 isLoading={isRefundSubmitting}
             />
+
+            <Dialog open={isLinkModalOpen} onOpenChange={setIsLinkModalOpen}>
+                <DialogContent className="sm:max-w-[460px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold text-slate-900">{lessonLinkModalTitle}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-2 py-2">
+                        <label className="text-sm font-medium text-slate-700">Eğitim/Kurs Linki</label>
+                        <Input
+                            placeholder="https://..."
+                            value={courseLinkValue}
+                            onChange={(event) => {
+                                setCourseLinkValue(event.target.value);
+                                if (courseLinkError) setCourseLinkError("");
+                            }}
+                            className={courseLinkError ? "border-red-500 focus-visible:ring-red-500/30" : ""}
+                        />
+                        {courseLinkError && <p className="text-xs text-red-500">{courseLinkError}</p>}
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setIsLinkModalOpen(false);
+                                setSelectedOrderId(null);
+                                setCourseLinkValue("");
+                                setCourseLinkError("");
+                            }}
+                            disabled={isSendingLink}
+                        >
+                            İptal
+                        </Button>
+                        <Button
+                            onClick={sendLinkSubmit}
+                            disabled={isSendingLink}
+                            className="bg-[#1A3EB1] hover:bg-[#1A3EB1]/90 text-white"
+                        >
+                            {isSendingLink ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Gönderiliyor...
+                                </>
+                            ) : (
+                                "Gönder"
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

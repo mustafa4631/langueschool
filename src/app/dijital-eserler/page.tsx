@@ -107,7 +107,6 @@ export default function DigitalProductsPage() {
                 <section className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
                     <div>
                         <h1 className="text-3xl md:text-5xl font-extrabold text-[#1a365d] tracking-tight">Dijital Eserler</h1>
-                        <p className="text-slate-600 mt-3 text-base md:text-lg">Aninda erisebileceginiz premium dijital icerikleri kesfedin.</p>
                     </div>
 
                     <div className="w-full md:w-[360px]">
