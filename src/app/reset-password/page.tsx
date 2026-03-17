@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useResetPasswordMutation } from "@/lib/features/auth/authApi";
 import { useGetWebpageContentsQuery } from "@/lib/features/blog/blogApi";
 
@@ -39,8 +39,7 @@ export default function ResetPasswordPage() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [resetPassword, { isLoading: isSubmitting }] = useResetPasswordMutation();
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const targetEmail = searchParams.get("email")?.trim() ?? "";
+    const [targetEmail, setTargetEmail] = useState("");
     const { data: logoContentData, isLoading: isLogoQueryLoading, isFetching: isLogoQueryFetching } =
         useGetWebpageContentsQuery({ ordering: "-created_at" });
     const isLogoLoading = isLogoQueryLoading || isLogoQueryFetching;
@@ -50,6 +49,12 @@ export default function ResetPasswordPage() {
         [logoContentData?.results]
     );
     const dynamicLogo = logoContent?.logo_url?.trim() ? logoContent.logo_url : "/logo.webp";
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const currentSearchParams = new URLSearchParams(window.location.search);
+        setTargetEmail(currentSearchParams.get("email")?.trim() ?? "");
+    }, []);
 
     const form = useForm<z.infer<typeof resetPasswordSchema>>({
         resolver: zodResolver(resetPasswordSchema),

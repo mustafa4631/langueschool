@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import React, { Suspense, useState, useEffect } from "react";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -54,8 +53,7 @@ const extractSendLinkMessage = (payload: unknown) => {
     return "";
 };
 
-export default function CourseOrdersPage() {
-    const searchParams = useSearchParams();
+function CourseOrdersPageContent() {
     const [page, setPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -74,9 +72,15 @@ export default function CourseOrdersPage() {
     // Additional filter if needed for Course Type (Online/Offline) - using basic search for now 
     // but building the skeleton logic if requested later:
     const [courseTypeFilter, setCourseTypeFilter] = useState("all");
-    const isPrivateTab = searchParams.get("orderTabType") === "private";
+    const [isPrivateTab, setIsPrivateTab] = useState(false);
     const isPrivateLessonFilter = isPrivateTab;
     const lessonLinkModalTitle = isPrivateTab ? "Özel Ders Linki Gönder" : "Kurs Linki Gönder";
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const currentSearchParams = new URLSearchParams(window.location.search);
+        setIsPrivateTab(currentSearchParams.get("orderTabType") === "private");
+    }, []);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -552,5 +556,19 @@ export default function CourseOrdersPage() {
                 </DialogContent>
             </Dialog>
         </div>
+    );
+}
+
+export default function CourseOrdersPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[300px] items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-[#1A3EB1]" />
+                </div>
+            }
+        >
+            <CourseOrdersPageContent />
+        </Suspense>
     );
 }

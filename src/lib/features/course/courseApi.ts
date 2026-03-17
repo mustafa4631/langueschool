@@ -85,6 +85,7 @@ export interface Course {
     description?: string;
     level: string | null;
     type: string;
+    is_private_lesson?: boolean;
     price: string | number;
     discounted_price?: string | number | null;
     image_url?: string | null;

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Loader2 } from "lucide-react";
@@ -9,8 +9,14 @@ import Link from "next/link";
 
 export default function OrdersLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const searchParams = useSearchParams();
     const { isAuthorized, profile, isLoading: isAuthLoading } = useAuthGuard("admin");
+    const [orderTabType, setOrderTabType] = React.useState<"private" | "course">("course");
+
+    React.useEffect(() => {
+        if (typeof window === "undefined") return;
+        const currentSearchParams = new URLSearchParams(window.location.search);
+        setOrderTabType(currentSearchParams.get("orderTabType") === "private" ? "private" : "course");
+    }, [pathname]);
 
     if (isAuthLoading || (!isAuthorized && typeof window !== "undefined")) {
         return (
@@ -21,7 +27,6 @@ export default function OrdersLayout({ children }: { children: React.ReactNode }
     }
 
     const isDigitalTabActive = pathname === "/dashboard/orders/digital-products";
-    const orderTabType = searchParams.get("orderTabType") === "private" ? "private" : "course";
     const isCoursesRoute = pathname === "/dashboard/orders/courses";
     const isCoursesTabActive = isCoursesRoute && orderTabType === "course";
     const isPrivateLessonsTabActive = isCoursesRoute && orderTabType === "private";
