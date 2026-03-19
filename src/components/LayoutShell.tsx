@@ -8,7 +8,7 @@ import { FloatingContactButtons } from "@/components/FloatingContactButtons";
 import { useBrandingAssets } from "@/hooks/useBrandingAssets";
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
-    const pathname = usePathname();
+    const pathname = usePathname() ?? "";
     const isAdminPanel = pathname.startsWith("/dashboard");
     const showNavigation = !isAdminPanel;
     const { logoSrc, faviconSrc } = useBrandingAssets();
