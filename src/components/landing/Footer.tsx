@@ -6,8 +6,6 @@ type FooterProps = {
     logoSrc?: string;
 };
 
-const headquarterAddress =
-    "TEKNOPARK SAMSUN Aksu Mah. Yurt Sk. OMÜ Yerleşkesi, Samsun Teknopark No: 165 Atakum/Samsun";
 const branchOfficeAddress =
     "Atakent, 3131. Sk. 10/B, 55000 Atakum, Samsun, Türkiye.";
 const researchDeptAddress =
@@ -71,16 +69,7 @@ export function Footer({ logoSrc = "/logo.webp" }: FooterProps) {
                     <div>
                         <h4 className="font-semibold mb-4">Adreslerimiz</h4>
                         <div className="grid gap-3 text-sm text-slate-600">
-                            <div className="rounded-xl border border-slate-200/70 bg-white/80 px-4 py-3">
-                                <div className="mb-1.5 flex items-center gap-2">
-                                    <MapPin className="h-4 w-4 shrink-0 text-slate-500" />
-                                    <p className="font-semibold text-slate-700">Genel Merkez (Teknopark)</p>
-                                </div>
-                                <p className="leading-relaxed text-slate-600">
-                                    {headquarterAddress}
-                                </p>
-                            </div>
-                            <div className="rounded-xl border border-slate-200/70 bg-white/80 px-4 py-3">
+                            <div className="py-3">
                                 <div className="mb-1.5 flex items-center gap-2">
                                     <MapPin className="h-4 w-4 shrink-0 text-slate-500" />
                                     <p className="font-semibold text-slate-700">Samsun Şubesi</p>
@@ -89,7 +78,7 @@ export function Footer({ logoSrc = "/logo.webp" }: FooterProps) {
                                     {branchOfficeAddress}
                                 </p>
                             </div>
-                            <div className="rounded-xl border border-slate-200/70 bg-white/80 px-4 py-3">
+                            <div className=" py-3">
                                 <div className="mb-1.5 flex items-center gap-2">
                                     <MapPin className="h-4 w-4 shrink-0 text-slate-500" />
                                     <p className="font-semibold text-slate-700">ARGE Departmanı</p>
@@ -103,7 +92,7 @@ export function Footer({ logoSrc = "/logo.webp" }: FooterProps) {
                     <div>
                         <h4 className="font-bold mb-4">İletişim</h4>
                         <div className="grid gap-3 text-sm text-slate-600 sm:grid-cols-1">
-                            <div className="flex items-start gap-3 rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2.5">
+                            <div className="py-2.5">
                                 <Mail className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
                                 <div className="min-w-0">
                                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">E-posta</p>
@@ -116,7 +105,7 @@ export function Footer({ logoSrc = "/logo.webp" }: FooterProps) {
                                 </div>
                             </div>
 
-                            <div className="flex items-start gap-3 rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2.5">
+                            <div className=" py-2.5">
                                 <PhoneCall className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
                                 <div className="min-w-0">
                                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Hemen Ara</p>
