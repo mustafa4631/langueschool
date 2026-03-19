@@ -107,6 +107,24 @@ export default function ExamPage() {
         return `${m}:${s}`;
     };
 
+    const toNumericId = (value: unknown): number | null => {
+        const numericValue = Number(value);
+        return Number.isFinite(numericValue) ? numericValue : null;
+    };
+
+    const getQuestionId = (question: { id?: unknown } | null | undefined): number | null => {
+        return toNumericId(question?.id);
+    };
+
+    const getOptionId = (option: { id?: unknown; option_id?: unknown; pk?: unknown }, optionIndex: number): number => {
+        return (
+            toNumericId(option?.id) ??
+            toNumericId(option?.option_id) ??
+            toNumericId(option?.pk) ??
+            optionIndex + 1
+        );
+    };
+
     const renderStickyHeader = (examName?: string) => (
         <section className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm w-full">
             <div className="container mx-auto px-4 md:px-6 py-4 md:py-6 text-left">
@@ -124,8 +142,12 @@ export default function ExamPage() {
 
     const questions = examData?.questions ?? [];
     const currentQuestion = questions[currentQuestionIndex];
+    const normalizedQuestionId = getQuestionId(currentQuestion);
     const hasNextQuestion = currentQuestionIndex < questions.length - 1;
-    const currentAnswer = userAnswers.find((answer) => answer.questionId === currentQuestion?.id);
+    const currentAnswer =
+        normalizedQuestionId === null
+            ? undefined
+            : userAnswers.find((answer) => answer.questionId === normalizedQuestionId);
 
     useEffect(() => {
         if (!isMounted || questions.length === 0) {
@@ -173,10 +195,10 @@ export default function ExamPage() {
     };
 
     const handleOptionSelect = (optionId: number, isCorrect: boolean) => {
-        if (!currentQuestion?.id) return;
+        if (normalizedQuestionId === null) return;
         setSelectedOptionId(optionId);
         dispatch(answerQuestion({
-            questionId: currentQuestion.id,
+            questionId: normalizedQuestionId,
             optionId,
             isCorrect
         }));
@@ -243,11 +265,12 @@ export default function ExamPage() {
                 {/* Options Grid */}
                 <div className="space-y-4 mb-10">
                     {currentQuestion?.options?.map((option, optionIndex) => {
-                        const isOptionSelected = option.id === selectedOptionId;
+                        const optionId = getOptionId(option as { id?: unknown; option_id?: unknown; pk?: unknown }, optionIndex);
+                        const isOptionSelected = optionId === selectedOptionId;
                         return (
                         <button
-                            key={`${currentQuestion.id}-${option.id}-${optionIndex}`}
-                            onClick={() => handleOptionSelect(option.id, option.is_correct)}
+                            key={`${currentQuestion.id}-${optionId}-${optionIndex}`}
+                            onClick={() => handleOptionSelect(optionId, option.is_correct)}
                             className={`w-full text-left p-5 rounded-xl border-2 transition-all ${isOptionSelected
                                 ? 'border-[#1a365d] bg-[#1a365d]/5 shadow-md flex items-center justify-between'
                                 : 'border-slate-200 hover:border-[#1a365d]/50 hover:bg-slate-50'
