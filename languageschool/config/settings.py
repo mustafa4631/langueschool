@@ -115,6 +115,9 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.AllowAny", # Global olarak herkese açar, View içinde IsAuthenticated diyerek özel kısıtlama yaparsın.
+    ),
 }
 
 CORS_ALLOWED_ORIGINS = [

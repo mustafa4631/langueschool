@@ -108,6 +108,7 @@ COURSE_TYPE_CHOICES = [
     ('online', 'Online'),
     ('offline', 'Offline'),
     ('private', 'Private'),
+    ('face_to_face', 'Yüz Yüze'),
 ]
 
 LEVEL_CHOICES = [
@@ -135,7 +136,7 @@ class Course(models.Model):
     )
     
     type = models.CharField(
-        max_length=10, 
+        max_length=20, 
         choices=COURSE_TYPE_CHOICES, 
         default='online'
     )

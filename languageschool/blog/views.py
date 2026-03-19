@@ -51,6 +51,7 @@ class CategoryListAPIView(ListAPIView):
     'name' query parametresi ile arama yapabilir.
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = CategoryListSerializer
     pagination_class = Pagination10
 
@@ -109,6 +110,7 @@ class BlogPostCreateAPIView(APIView):
     
 class BlogPostListAPIView(ListAPIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = BlogPostListSerializer
     pagination_class = Pagination10
 
@@ -140,6 +142,7 @@ class BlogPostListAPIView(ListAPIView):
 
 class BlogPostDetailAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def get(self, request, id):
         try:
@@ -215,6 +218,7 @@ class WebPageContentCreate(APIView):
 
 class WebPageContentListAPIView(ListAPIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = WebPageContentListSerializer
     pagination_class = Pagination10
 
@@ -271,6 +275,7 @@ class CourseGalleryCreate(APIView):
 
 class CourseGalleryListAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     pagination_class = Pagination10
 
     def get(self, request):
@@ -318,6 +323,7 @@ class CertificateCreate(APIView):
 
 class CertificateListAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     pagination_class = Pagination10
 
     def get(self, request):

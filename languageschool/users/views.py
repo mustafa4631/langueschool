@@ -32,6 +32,10 @@ from django.db.models import Q
 from django.contrib.auth.hashers import make_password
 
 class RegisterAPIView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         
@@ -47,7 +51,8 @@ class RegisterAPIView(APIView):
 
 class LoginAPIView(APIView):
     permission_classes = [AllowAny]
-
+    authentication_classes = []
+    
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
@@ -72,6 +77,7 @@ class LoginAPIView(APIView):
 
 class ForgotPasswordAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         identifier = request.data.get('username_or_email')
@@ -290,6 +296,7 @@ class YouTubeLinkCreateAPIView(APIView):
     
 class YouTubeLinkListAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     pagination_class = Pagination10
 
     def get(self, request):

@@ -243,6 +243,7 @@ class CreateCourseAPIView(APIView):
 
 class CourseListAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     pagination_class = Pagination10
 
     def get(self, request):
@@ -310,6 +311,7 @@ class CourseListAPIView(APIView):
 
 class CourseDetailAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def get(self, request, id):
         try:
