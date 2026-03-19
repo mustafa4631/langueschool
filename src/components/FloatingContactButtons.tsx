@@ -11,14 +11,14 @@ export function FloatingContactButtons() {
     if (isDashboardPage) return null;
 
     const phoneLink = "tel:08508408303";
-    const whatsappLink = "https://wa.me/908508408303";
+    const whatsappLink = "https://wa.me/9053936886";
 
     return (
         <>
             <a
                 href={phoneLink}
                 aria-label="Telefon ile ara"
-                className="fixed bottom-5 right-4 z-50 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#1A3EB1] text-white shadow-lg ring-1 ring-white/40 transition-transform hover:scale-105 md:bottom-6 md:right-6 md:h-14 md:w-14 animate-pulse"
+                className="fixed bottom-5 right-4 z-50 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#000000] text-white shadow-lg ring-1 ring-white/40 transition-transform hover:scale-105 md:bottom-6 md:right-6 md:h-14 md:w-14 animate-pulse"
             >
                 <Phone className="h-5 w-5 md:h-6 md:w-6" />
             </a>

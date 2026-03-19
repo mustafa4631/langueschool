@@ -22,10 +22,14 @@ import {
     Heading3,
     Quote,
     Code2,
+    Table2,
+    Rows3,
+    Columns3,
     Undo2,
     Redo2,
     Maximize,
     Minimize,
+    Trash2,
     X,
     Check,
     ChevronsUpDown
@@ -45,6 +49,10 @@ import LinkExtension from '@tiptap/extension-link';
 import ImageExtension from '@tiptap/extension-image';
 import CharacterCount from '@tiptap/extension-character-count';
 import UnderlineExtension from "@tiptap/extension-underline";
+import { Table } from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableHeader from "@tiptap/extension-table-header";
+import TableCell from "@tiptap/extension-table-cell";
 
 export default function NewBlogPostPage() {
     const router = useRouter();
@@ -71,6 +79,14 @@ export default function NewBlogPostPage() {
         (value) => value.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0,
         { message: "Lütfen blog içeriği girin." }
     );
+    const editorTableExtension = Table.configure({
+        resizable: true,
+    });
+    const tableStylesConfig = {
+        borderColor: "#cbd5e1",
+        headerBackground: "#f8fafc",
+        cellPadding: "0.625rem 0.75rem",
+    } as const;
 
     // Category Web Search Query States & Debounce Logic
     const [categorySearchQuery, setCategorySearchQuery] = useState("");
@@ -225,6 +241,29 @@ export default function NewBlogPostPage() {
         setEditorContent(content);
     };
 
+    const insertTableHandler = () => {
+        if (!editor) return;
+        editor
+            .chain()
+            .focus()
+            .insertContent(`
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Almanca</th>
+                            <th>Türkçe</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td></td><td></td></tr>
+                        <tr><td></td><td></td></tr>
+                    </tbody>
+                </table>
+                <p></p>
+            `)
+            .run();
+    };
+
     const editor = useEditor({
         immediatelyRender: false,
         extensions: [
@@ -240,6 +279,10 @@ export default function NewBlogPostPage() {
                 inline: true,
             }),
             UnderlineExtension,
+            editorTableExtension,
+            TableRow,
+            TableHeader,
+            TableCell,
             CharacterCount,
         ],
         content: '',
@@ -459,6 +502,66 @@ export default function NewBlogPostPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
+                                                    onClick={insertTableHandler}
+                                                    className="h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0"
+                                                    title="Kelime tablosu ekle"
+                                                >
+                                                    <Table2 className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => editor.chain().focus().addRowAfter().run()}
+                                                    disabled={!editor.isActive("table")}
+                                                    className="h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 disabled:opacity-40"
+                                                    title="Satır ekle"
+                                                >
+                                                    <Rows3 className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => editor.chain().focus().addColumnAfter().run()}
+                                                    disabled={!editor.isActive("table")}
+                                                    className="h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 disabled:opacity-40"
+                                                    title="Sütun ekle"
+                                                >
+                                                    <Columns3 className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => editor.chain().focus().deleteRow().run()}
+                                                    disabled={!editor.isActive("table")}
+                                                    className="h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 disabled:opacity-40"
+                                                    title="Satır sil"
+                                                >
+                                                    <Rows3 className="h-4 w-4 rotate-180" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => editor.chain().focus().deleteColumn().run()}
+                                                    disabled={!editor.isActive("table")}
+                                                    className="h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 disabled:opacity-40"
+                                                    title="Sütun sil"
+                                                >
+                                                    <Columns3 className="h-4 w-4 rotate-180" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => editor.chain().focus().deleteTable().run()}
+                                                    disabled={!editor.isActive("table")}
+                                                    className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0 disabled:opacity-40"
+                                                    title="Tabloyu kaldır"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                                <div className="w-px h-5 bg-slate-300 mx-1"></div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
                                                     onClick={() => editor.chain().focus().toggleBlockquote().run()}
                                                     className={`h-8 w-8 text-slate-500 hover:text-slate-800 shrink-0 ${editor.isActive('blockquote') ? 'bg-slate-200 text-slate-800' : ''}`}
                                                 >
@@ -560,6 +663,36 @@ export default function NewBlogPostPage() {
                                                     border: 0;
                                                     border-radius: 0.5rem;
                                                     margin: 0.75rem 0;
+                                                }
+                                                .tiptap table {
+                                                    width: 100%;
+                                                    border-collapse: collapse;
+                                                    margin: 1rem 0;
+                                                    table-layout: fixed;
+                                                }
+                                                .tiptap th,
+                                                .tiptap td {
+                                                    border: 1px solid ${tableStylesConfig.borderColor};
+                                                    padding: ${tableStylesConfig.cellPadding};
+                                                    vertical-align: top;
+                                                    text-align: left;
+                                                    position: relative;
+                                                }
+                                                .tiptap th {
+                                                    background: ${tableStylesConfig.headerBackground};
+                                                    font-weight: 700;
+                                                    color: #1e293b;
+                                                }
+                                                .tiptap .selectedCell:after {
+                                                    background: rgba(26, 62, 177, 0.12);
+                                                    content: "";
+                                                    left: 0;
+                                                    right: 0;
+                                                    top: 0;
+                                                    bottom: 0;
+                                                    pointer-events: none;
+                                                    position: absolute;
+                                                    z-index: 2;
                                                 }
                                             `}</style>
                                             <EditorContent editor={editor} />

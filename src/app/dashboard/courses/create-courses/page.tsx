@@ -15,13 +15,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { UploadCloud, X, Loader2, Calendar as CalendarIcon, Clock, Info } from "lucide-react";
 import { useCreateCourseMutation, useGetCourseCategoriesQuery } from "@/lib/features/course/courseApi";
 import { toast } from "react-hot-toast";
+
+const courseTypeOptions = [
+    { label: "Online", value: "online" },
+    { label: "Offline", value: "offline" },
+    { label: "Yüz Yüze", value: "face_to_face" },
+] as const;
+
+type CourseTypeOptionValue = (typeof courseTypeOptions)[number]["value"];
+
 const courseSchema = z.object({
     name: z.string().min(1, "Kurs adı zorunludur").max(200, "En fazla 200 karakter"),
     description: z.string().min(1, "Açıklama zorunludur"),
     level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2'], {
         error: "Geçersiz veya eksik seviye seçimi",
     }),
-    type: z.enum(['online', 'offline'], {
+    type: z.enum(['online', 'offline', 'face_to_face'], {
         error: "Kurs türü seçimi zorunludur"
     }),
     is_private_lesson: z.boolean().default(false),
@@ -100,6 +109,11 @@ export default function CreateCoursePage() {
     const courseTags = watch("tags") || [];
     const isPrivateLesson = watch("is_private_lesson");
     const selectedCourseType = watch("type");
+    const isFaceToFace = selectedCourseType === "face_to_face";
+
+    const handleCourseTypeChange = (nextType: CourseTypeOptionValue) => {
+        setValue("type", nextType, { shouldValidate: true, shouldDirty: true });
+    };
 
     useEffect(() => {
         if (isPrivateLesson && selectedCourseType === "offline") {
@@ -178,10 +192,11 @@ export default function CreateCoursePage() {
             return;
         }
 
-        const { capacity, category_id, ...restData } = data;
+        const { capacity, category_id, type: selectedType, ...restData } = data;
 
         const payload = {
             ...restData,
+            type: selectedType,
             quota: capacity,
             image_url: uploadedImage.url,
             image_public_id: uploadedImage.public_id,
@@ -287,20 +302,31 @@ export default function CreateCoursePage() {
                                             control={control}
                                             name="type"
                                             render={({ field }) => (
-                                                <Select onValueChange={field.onChange} value={field.value || undefined}>
+                                                <Select
+                                                    onValueChange={(value) => handleCourseTypeChange(value as CourseTypeOptionValue)}
+                                                    value={field.value || undefined}
+                                                >
                                                     <SelectTrigger className={`bg-slate-50 border-slate-200 focus:ring-[#1A3EB1] ${errors.type ? 'border-red-500' : ''}`}>
                                                         <SelectValue placeholder="Tür Seçiniz" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="online">Online</SelectItem>
-                                                        <SelectItem value="offline" disabled={Boolean(isPrivateLesson)}>
-                                                            Offline
-                                                        </SelectItem>
+                                                        {courseTypeOptions.map((option) => (
+                                                            <SelectItem
+                                                                key={option.value}
+                                                                value={option.value}
+                                                                disabled={Boolean(isPrivateLesson) && option.value === "offline"}
+                                                            >
+                                                                {option.label}
+                                                            </SelectItem>
+                                                        ))}
                                                     </SelectContent>
                                                 </Select>
                                             )}
                                         />
                                         {errors.type && <p className="text-red-500 text-xs mt-1">{errors.type.message}</p>}
+                                        {isFaceToFace && (
+                                            <p className="text-xs text-slate-500">Bu kurs tipi yüz yüze eğitim olarak oluşturulacaktır.</p>
+                                        )}
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="text-sm font-semibold text-slate-700">Kurs Tipi</Label>

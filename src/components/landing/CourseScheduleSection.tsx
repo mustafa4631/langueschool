@@ -87,21 +87,33 @@ type CourseColumnProps = {
     isLoading: boolean;
     title: string;
     icon: "online" | "offline";
+    href?: string;
 };
 
-function CourseColumn({ courses, isLoading, title, icon }: CourseColumnProps) {
+function CourseColumn({ courses, isLoading, title, icon, href }: CourseColumnProps) {
     const isOnline = icon === "online";
 
     return (
         <div className="space-y-6">
-            <h3 className="flex items-center text-xl font-bold text-slate-800">
-                {isOnline ? (
-                    <MonitorPlay className="w-6 h-6 mr-2 text-primary" />
-                ) : (
-                    <MapPin className="w-6 h-6 mr-2 text-secondary" />
-                )}
-                {title}
-            </h3>
+            {href ? (
+                <Link href={href} className="group inline-flex items-center text-xl font-bold text-slate-800 transition-colors hover:text-primary">
+                    {isOnline ? (
+                        <MonitorPlay className="w-6 h-6 mr-2 text-primary" />
+                    ) : (
+                        <MapPin className="w-6 h-6 mr-2 text-secondary" />
+                    )}
+                    {title}
+                </Link>
+            ) : (
+                <h3 className="flex items-center text-xl font-bold text-slate-800">
+                    {isOnline ? (
+                        <MonitorPlay className="w-6 h-6 mr-2 text-primary" />
+                    ) : (
+                        <MapPin className="w-6 h-6 mr-2 text-secondary" />
+                    )}
+                    {title}
+                </h3>
+            )}
 
             {isLoading ? (
                 <div className="flex min-h-[180px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
@@ -169,7 +181,14 @@ function CourseColumn({ courses, isLoading, title, icon }: CourseColumnProps) {
     );
 }
 
-export function CourseScheduleSection() {
+type CourseScheduleSectionProps = {
+    faceToFaceCoursePage?: {
+        title: string;
+        href: string;
+    };
+};
+
+export function CourseScheduleSection({ faceToFaceCoursePage }: CourseScheduleSectionProps) {
     const {
         data: onlineCourseResponse,
         isLoading: isOnlineLoading,
@@ -213,8 +232,9 @@ export function CourseScheduleSection() {
                     <CourseColumn
                         courses={offlineCourses}
                         isLoading={isOfflineLoading || isOfflineFetching}
-                        title="Yüz Yüze Kurslar (Samsun)"
+                        title={faceToFaceCoursePage?.title || "Yüz Yüze Kurslar (Samsun)"}
                         icon="offline"
+                        href={faceToFaceCoursePage?.href}
                     />
                 </div>
             </div>

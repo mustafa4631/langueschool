@@ -135,7 +135,7 @@ export function Sidebar({ firstName, lastName, username }: SidebarProps) {
                 <div className="p-6 flex items-center justify-center border-b border-gray-300 shrink-0">
                     <Link href="/">
                         <Image
-                            src="/logo.webp"
+                            src="/dash-logo.png"
                             alt="Alman Akademisi Logo"
                             width={180}
                             height={60}

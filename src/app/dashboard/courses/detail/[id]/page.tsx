@@ -86,6 +86,32 @@ export default function CourseDetailPage() {
     const safeQuota = quota > 0 ? quota : 1;
     const occupancyPercentage = Math.min(Math.round((registered / safeQuota) * 100), 100);
     const isPrivateLesson = Boolean((courseDetailData as any)?.is_private_lesson);
+    const courseTypeValue = courseDetailData?.type;
+
+    const renderTypeBadge = (type?: string | null) => {
+        const formattedType =
+            type === "face_to_face"
+                ? "Yüz Yüze"
+                : type === "online"
+                    ? "Online"
+                    : type === "offline"
+                        ? "Offline"
+                        : "Belirtilmemiş";
+
+        const isFaceToFace = type === "face_to_face";
+
+        return (
+            <Badge
+                className={
+                    isFaceToFace
+                        ? "bg-[#1A3EB1]/10 text-[#1A3EB1] hover:bg-[#1A3EB1]/20 font-semibold px-3 py-1 rounded-full border-none shadow-none"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold px-3 py-1 rounded-full border-none shadow-none"
+                }
+            >
+                {formattedType}
+            </Badge>
+        );
+    };
 
     return (
         <div className="flex min-h-screen bg-[#F8FAFC]">
@@ -159,6 +185,10 @@ export default function CourseDetailPage() {
                                         ) : (
                                             <span className="text-slate-400 text-sm">-</span>
                                         )}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-500 mb-2">Kurs Türü</p>
+                                        {renderTypeBadge(courseTypeValue)}
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium text-slate-500 mb-2">Kurs Tipi</p>

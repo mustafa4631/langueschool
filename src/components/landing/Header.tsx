@@ -26,6 +26,9 @@ type HeaderProps = {
 };
 
 export function Header({ logoSrc = "/logo.webp" }: HeaderProps) {
+    const mainNavLabel = "Yüz Yüze Almanca Kursu";
+    const faceToFaceUrl = "/yuz-yuze-almanca-kursu";
+
     const router = useRouter();
     const pathname = usePathname();
     const dispatch = useAppDispatch();
@@ -50,11 +53,16 @@ export function Header({ logoSrc = "/logo.webp" }: HeaderProps) {
         { label: "C2 Almanca Kursu", href: "/kurslar/c2-almanca-kursu" },
     ];
 
-    const mobileNavLinks = [
-        { label: "Offline Kurslar", href: "/kurslar/offline-almanca-kursu" },
+    const navbarItems = [
+        { label: mainNavLabel, href: faceToFaceUrl },
         { label: "Dijital Eserler", href: "/dijital-eserler" },
         { label: "Bilgi Deposu", href: "/bilgi-deposu" },
+        { label: "İletişim", href: "/iletisim" },
         { label: "SSS", href: "/sikca-sorulan-sorular" },
+    ];
+
+    const mobileNavLinks = [
+        ...navbarItems,
         { label: "Bilgi Al", href: "/bilgi-al" },
     ];
 
@@ -205,10 +213,15 @@ export function Header({ logoSrc = "/logo.webp" }: HeaderProps) {
                         </NavigationMenuList>
                     </NavigationMenu>
 
-                    <Link href="/kurslar/offline-almanca-kursu" className="hover:text-primary px-3 py-2 transition-colors">Offline (Kayıtlı) Almanca Kursları</Link>
-                    <Link href="/dijital-eserler" className="hover:text-primary px-3 py-2 transition-colors">Dijital Eserler</Link>
-                    <Link href="/bilgi-deposu" className="hover:text-primary px-3 py-2 transition-colors">Bilgi Deposu</Link>
-                    <Link href="/sikca-sorulan-sorular" className="hover:text-primary px-3 py-2 transition-colors">SSS</Link>
+                    {navbarItems.map((item) => (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className="hover:text-primary px-3 py-2 transition-colors"
+                        >
+                            {item.label}
+                        </Link>
+                    ))}
                 </nav>
 
                 <div className="flex items-center gap-3">

@@ -6,12 +6,29 @@ type FooterProps = {
     logoSrc?: string;
 };
 
+const headquarterAddress =
+    "TEKNOPARK SAMSUN Aksu Mah. Yurt Sk. OMÜ Yerleşkesi, Samsun Teknopark No: 165 Atakum/Samsun";
+const branchOfficeAddress =
+    "Atakent, 3131. Sk. 10/B, 55000 Atakum, Samsun, Türkiye.";
+const researchDeptAddress =
+    "Aksu Mah. Yurt Sk. OMÜ Yerleşkesi, Samsun Teknopark NO: 165 Atakum, Samsun, Türkiye.";
+const footerGridConfig =
+    "grid gap-8 text-left border-b pb-12 mb-8 md:grid-cols-5";
+const argeDeptFooterLink = { label: "Ar-Ge Departmanı", href: "/arge-departmani" } as const;
+const corporateLinks = [
+    { label: "Hakkımızda", href: "#" },
+    { label: "Gizlilik Politikası", href: "#" },
+    { label: "Kullanım Şartları", href: "#" },
+    argeDeptFooterLink,
+] as const;
+const footerNavList = "space-y-2 text-sm text-slate-600";
+
 export function Footer({ logoSrc = "/logo.webp" }: FooterProps) {
     return (
         <footer className="bg-slate-50 border-t pt-16 pb-8">
             <div className="container mx-auto px-4 md:px-6 text-center">
 
-                <div className="grid gap-8 md:grid-cols-4 text-left border-b pb-12 mb-8">
+                <div className={footerGridConfig}>
                     <div className="md:col-span-1">
                         <div className="mb-4">
                             <Link href="/">
@@ -19,7 +36,7 @@ export function Footer({ logoSrc = "/logo.webp" }: FooterProps) {
                                     <img
                                         src={logoSrc}
                                         alt="Alman Akademisi Logo"
-                                        className="h-24 w-auto object-contain"
+                                        className="h-16 w-auto object-contain"
                                     />
                                 ) : (
                                     <Image
@@ -27,7 +44,7 @@ export function Footer({ logoSrc = "/logo.webp" }: FooterProps) {
                                         alt="Alman Akademisi Logo"
                                         width={200}
                                         height={100}
-                                        className="h-24 w-auto object-contain"
+                                        className="h-16 w-auto object-contain"
                                     />
                                 )}
                             </Link>
@@ -35,10 +52,12 @@ export function Footer({ logoSrc = "/logo.webp" }: FooterProps) {
                     </div>
                     <div>
                         <h4 className="font-bold mb-4">Kurumsal</h4>
-                        <ul className="space-y-2 text-sm text-slate-600">
-                            <li><Link href="#">Hakkımızda</Link></li>
-                            <li><Link href="#">Gizlilik Politikası</Link></li>
-                            <li><Link href="#">Kullanım Şartları</Link></li>
+                        <ul className={footerNavList}>
+                            {corporateLinks.map((linkItem) => (
+                                <li key={linkItem.label}>
+                                    <Link href={linkItem.href}>{linkItem.label}</Link>
+                                </li>
+                            ))}
                         </ul>
                     </div>
                     <div>
@@ -48,6 +67,38 @@ export function Footer({ logoSrc = "/logo.webp" }: FooterProps) {
                             <li><Link href="/kurslar/ozel-ders">Birebir Eğitim</Link></li>
                             <li><Link href="/sikca-sorulan-sorular">Sıkça Sorulan Sorular</Link></li>
                         </ul>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold mb-4">Adreslerimiz</h4>
+                        <div className="grid gap-3 text-sm text-slate-600">
+                            <div className="rounded-xl border border-slate-200/70 bg-white/80 px-4 py-3">
+                                <div className="mb-1.5 flex items-center gap-2">
+                                    <MapPin className="h-4 w-4 shrink-0 text-slate-500" />
+                                    <p className="font-semibold text-slate-700">Genel Merkez (Teknopark)</p>
+                                </div>
+                                <p className="leading-relaxed text-slate-600">
+                                    {headquarterAddress}
+                                </p>
+                            </div>
+                            <div className="rounded-xl border border-slate-200/70 bg-white/80 px-4 py-3">
+                                <div className="mb-1.5 flex items-center gap-2">
+                                    <MapPin className="h-4 w-4 shrink-0 text-slate-500" />
+                                    <p className="font-semibold text-slate-700">Samsun Şubesi</p>
+                                </div>
+                                <p className="leading-relaxed text-slate-600">
+                                    {branchOfficeAddress}
+                                </p>
+                            </div>
+                            <div className="rounded-xl border border-slate-200/70 bg-white/80 px-4 py-3">
+                                <div className="mb-1.5 flex items-center gap-2">
+                                    <MapPin className="h-4 w-4 shrink-0 text-slate-500" />
+                                    <p className="font-semibold text-slate-700">ARGE Departmanı</p>
+                                </div>
+                                <p className="leading-relaxed text-slate-600">
+                                    {researchDeptAddress}
+                                </p>
+                            </div>
+                        </div>
                     </div>
                     <div>
                         <h4 className="font-bold mb-4">İletişim</h4>
@@ -75,16 +126,6 @@ export function Footer({ logoSrc = "/logo.webp" }: FooterProps) {
                                     >
                                         0 850 840 8303
                                     </a>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-3 rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2.5">
-                                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
-                                <div className="min-w-0">
-                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Adres</p>
-                                    <p className="leading-relaxed text-slate-700">
-                                        TEKNOPARK SAMSUN Aksu Mah. Yurt Sk. OMÜ Yerleşkesi, Samsun Teknopark No: 165 Atakum/Samsun
-                                    </p>
                                 </div>
                             </div>
                         </div>

@@ -16,13 +16,21 @@ import { UploadCloud, X, Loader2, ChevronRight, Info } from "lucide-react";
 import { useEditCourseMutation, useGetCourseCategoriesQuery, useGetCourseDetailQuery } from "@/lib/features/course/courseApi";
 import { toast } from "react-hot-toast";
 
+const courseTypeOptions = [
+    { label: "Online", value: "online" },
+    { label: "Offline", value: "offline" },
+    { label: "Yüz Yüze", value: "face_to_face" },
+] as const;
+
+type CourseTypeValue = (typeof courseTypeOptions)[number]["value"];
+
 const courseSchema = z.object({
     name: z.string().min(1, "Kurs adı zorunludur").max(200, "En fazla 200 karakter"),
     description: z.string().min(1, "Açıklama zorunludur"),
     level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2'], {
         error: "Geçersiz veya eksik seviye seçimi",
     }),
-    type: z.enum(['online', 'offline'], {
+    type: z.enum(['online', 'offline', 'face_to_face'], {
         error: "Kurs türü seçimi zorunludur"
     }),
     is_private_lesson: z.boolean().default(false),
@@ -108,6 +116,10 @@ export default function EditCoursePage() {
     const isPrivateLesson = watch("is_private_lesson");
     const selectedCourseType = watch("type");
 
+    const handleTypeChange = (nextType: CourseTypeValue) => {
+        setValue("type", nextType, { shouldValidate: true, shouldDirty: true });
+    };
+
     useEffect(() => {
         if (isPrivateLesson && selectedCourseType === "offline") {
             setValue("type", "online", { shouldValidate: true, shouldDirty: true });
@@ -150,7 +162,7 @@ export default function EditCoursePage() {
                 tags: courseDetailData.tags || [],
                 education_link: courseDetailData.education_link || "",
                 level: courseDetailData.level ? (String(courseDetailData.level) as "A1" | "A2" | "B1" | "B2" | "C1" | "C2") : undefined,
-                type: courseDetailData.type ? (String(courseDetailData.type).toLowerCase() as "online" | "offline") : undefined,
+                type: courseDetailData.type ? (String(courseDetailData.type).toLowerCase() as "online" | "offline" | "face_to_face") : undefined,
                 is_private_lesson: Boolean((courseDetailData as any)?.is_private_lesson),
             });
 
@@ -236,10 +248,11 @@ export default function EditCoursePage() {
             return;
         }
 
-        const { capacity, category_id, ...restData } = data;
+        const { capacity, category_id, type: selectedType, ...restData } = data;
 
         const updateCoursePayload: any = {
             ...restData,
+            type: selectedType,
             quota: capacity,
             category: Number(category_id),
             is_private_lesson: Boolean(
@@ -380,19 +393,24 @@ export default function EditCoursePage() {
                                             control={control}
                                             name="type"
                                             render={({ field }) => (
-                                                <Select onValueChange={field.onChange} value={['online', 'offline'].find(opt => String(opt) === String(field.value)) || undefined}>
+                                                <Select
+                                                    onValueChange={(value) => handleTypeChange(value as CourseTypeValue)}
+                                                    value={courseTypeOptions.find((option) => String(option.value) === String(field.value))?.value || undefined}
+                                                >
                                                     <SelectTrigger className={`bg-slate-50 border-slate-200 focus:ring-[#1A3EB1] ${errors.type ? 'border-red-500' : ''}`}>
                                                         <SelectValue placeholder="Tür Seçiniz" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="online">Online</SelectItem>
-                                                        <SelectItem
-                                                            value="offline"
-                                                            disabled={Boolean(isPrivateLesson)}
-                                                            className="data-disabled:opacity-45 data-disabled:line-through"
-                                                        >
-                                                            Offline
-                                                        </SelectItem>
+                                                        {courseTypeOptions.map((option) => (
+                                                            <SelectItem
+                                                                key={option.value}
+                                                                value={option.value}
+                                                                disabled={Boolean(isPrivateLesson) && option.value === "offline"}
+                                                                className={option.value === "offline" ? "data-disabled:opacity-45 data-disabled:line-through" : undefined}
+                                                            >
+                                                                {option.label}
+                                                            </SelectItem>
+                                                        ))}
                                                     </SelectContent>
                                                 </Select>
                                             )}

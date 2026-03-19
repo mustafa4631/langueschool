@@ -64,6 +64,30 @@ function CoursesPageContent() {
     const isPrevDisabled = !courseListResponse?.previous || isCourseListLoading || isFetchingCourses;
     const isNextDisabled = !courseListResponse?.next || isCourseListLoading || isFetchingCourses;
 
+    const formatTypeLabel = (type?: string) => {
+        if (type === "face_to_face") return "Yüz Yüze";
+        if (type === "online") return "Online";
+        if (type === "offline") return "Offline";
+        return "Bilinmiyor";
+    };
+
+    const renderCourseType = (type?: string) => {
+        const isFaceToFace = type === "face_to_face";
+        const typeLabel = formatTypeLabel(type);
+
+        return (
+            <Badge
+                className={
+                    isFaceToFace
+                        ? "bg-[#1A3EB1]/10 text-[#1A3EB1] hover:bg-[#1A3EB1]/20 border-none shadow-none font-semibold"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200 border-none shadow-none font-semibold"
+                }
+            >
+                {typeLabel}
+            </Badge>
+        );
+    };
+
     const handlePageChange = (newPage: number) => {
         if (newPage >= 1 && newPage <= totalPages) {
             setPage(newPage);
@@ -168,6 +192,7 @@ function CoursesPageContent() {
                                             <SelectItem value="all">Tümü (Tür)</SelectItem>
                                             <SelectItem value="online">Online</SelectItem>
                                             <SelectItem value="offline">Offline</SelectItem>
+                                            <SelectItem value="face_to_face">Yüz Yüze</SelectItem>
                                         </SelectContent>
                                     </Select>
 
@@ -241,7 +266,7 @@ function CoursesPageContent() {
                                                         )}
                                                     </TableCell>
                                                     <TableCell className="border-b border-slate-100 py-3 px-4 lg:px-6">
-                                                        <span className="font-medium text-slate-700 text-sm capitalize">{course.type}</span>
+                                                        {renderCourseType(course.type)}
                                                     </TableCell>
                                                     <TableCell className="border-b border-slate-100 py-3 px-4 lg:px-6">
                                                         <Badge

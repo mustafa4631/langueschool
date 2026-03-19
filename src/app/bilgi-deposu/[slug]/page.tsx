@@ -33,6 +33,13 @@ const extractPostId = (slug: string): string | undefined => {
     return matchedId?.[1];
 };
 
+const decodeHTML = (html: string) => {
+    if (typeof document === "undefined") return html;
+    const txt = document.createElement("textarea");
+    txt.innerHTML = html;
+    return txt.value;
+};
+
 export default function BlogPostDetailPage({ params }: { params: Promise<PageParams> }) {
     const { slug } = use(params);
     const identifier = extractPostId(slug);
@@ -43,6 +50,14 @@ export default function BlogPostDetailPage({ params }: { params: Promise<PagePar
     });
 
     const categories = post?.categories ?? [];
+    const decodedBlogContent = decodeHTML(post?.content || "");
+    const sanitizedMarkup = { __html: decodedBlogContent };
+    const htmlRenderer = (
+        <div
+            className="blog-content prose prose-blue prose-lg max-w-none text-slate-700 leading-[1.8] [&_table]:w-full [&_table]:border [&_table]:border-slate-300 [&_table]:border-collapse [&_th]:bg-slate-50 [&_th]:px-4 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-slate-700 [&_td]:border [&_td]:border-slate-300 [&_td]:px-4 [&_td]:py-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_img]:rounded-xl [&_img]:shadow-sm"
+            dangerouslySetInnerHTML={sanitizedMarkup}
+        />
+    );
     const tags = useMemo(() => {
         if (!post?.tags) return [];
         return post.tags
@@ -130,12 +145,7 @@ export default function BlogPostDetailPage({ params }: { params: Promise<PagePar
                 </section>
 
                 <section className="max-w-3xl mx-auto py-12 px-4">
-                    <article className="prose prose-blue prose-lg max-w-none text-slate-700 leading-[1.8]">
-                        <div
-                            className="[&_table]:w-full [&_table]:border [&_table]:border-slate-200 [&_th]:bg-slate-50 [&_th]:px-4 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-slate-700 [&_td]:border-t [&_td]:border-slate-200 [&_td]:px-4 [&_td]:py-2 [&_ul]:list-disc [&_ul]:pl-6 [&_img]:rounded-xl [&_img]:shadow-sm"
-                            dangerouslySetInnerHTML={{ __html: post.content || "" }}
-                        />
-                    </article>
+                    <article>{htmlRenderer}</article>
                 </section>
 
                 {tags.length > 0 && (

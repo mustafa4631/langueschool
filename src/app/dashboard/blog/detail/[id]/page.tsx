@@ -21,6 +21,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import toast from "react-hot-toast";
 
+const decodeHTML = (html: string) => {
+    if (typeof document === "undefined") return html;
+    const txt = document.createElement("textarea");
+    txt.innerHTML = html;
+    return txt.value;
+};
+
 const getCategoryColor = (name: string) => {
     const colors = [
         "bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100",
@@ -73,6 +80,14 @@ export default function BlogDetailPage() {
             year: "numeric"
         });
     };
+    const decodedBlogContent = decodeHTML(post?.content || "");
+    const sanitizedMarkup = { __html: decodedBlogContent };
+    const htmlRenderer = (
+        <div
+            className="blog-content prose prose-slate prose-blue max-w-none text-slate-700 w-full [&_table]:w-full [&_table]:border [&_table]:border-slate-300 [&_table]:border-collapse [&_th]:bg-slate-50 [&_th]:px-4 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-slate-700 [&_td]:border [&_td]:border-slate-300 [&_td]:px-4 [&_td]:py-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6"
+            dangerouslySetInnerHTML={sanitizedMarkup}
+        />
+    );
 
     return (
         <div className="min-h-screen bg-[#FAFBFF] relative flex flex-col items-start lg:flex-row">
@@ -83,7 +98,7 @@ export default function BlogDetailPage() {
             />
 
             <main className="w-full lg:ml-72 transition-all duration-300 min-h-screen flex flex-col">
-                <div className="w-full px-4 py-8 pt-[4.5rem] lg:pt-8 flex flex-col flex-1">
+                <div className="w-full px-4 py-8 pt-18 lg:pt-8 flex flex-col flex-1">
                     <div className="max-w-6xl mx-auto flex flex-col gap-8 w-full flex-1">
 
                         {/* Header Block */}
@@ -201,10 +216,7 @@ export default function BlogDetailPage() {
                                         </div>
 
                                         {/* Rich Text Injection */}
-                                        <div
-                                            className="prose prose-slate prose-blue max-w-none text-slate-700 w-full"
-                                            dangerouslySetInnerHTML={{ __html: post.content }}
-                                        />
+                                        {htmlRenderer}
                                     </div>
                                 </div>
 
