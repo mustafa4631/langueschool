@@ -122,6 +122,19 @@ export default function ExamPage() {
         </section>
     );
 
+    const questions = examData?.questions ?? [];
+    const currentQuestion = questions[currentQuestionIndex];
+    const hasNextQuestion = currentQuestionIndex < questions.length - 1;
+    const currentAnswer = userAnswers.find((answer) => answer.questionId === currentQuestion?.id);
+
+    useEffect(() => {
+        if (!isMounted || questions.length === 0) {
+            setSelectedOptionId(null);
+            return;
+        }
+        setSelectedOptionId(currentAnswer?.optionId ?? null);
+    }, [isMounted, questions.length, currentAnswer?.optionId]);
+
     if (!isMounted || examDataLoading) {
         return (
             <div className="min-h-screen flex flex-col bg-slate-50">
@@ -154,16 +167,6 @@ export default function ExamPage() {
             </div>
         );
     }
-
-    const questions = examData?.questions ?? [];
-    const currentQuestion = questions[currentQuestionIndex];
-    const hasNextQuestion = currentQuestionIndex < questions.length - 1;
-    const currentAnswer = userAnswers.find(a => a.questionId === currentQuestion?.id);
-
-    useEffect(() => {
-        setSelectedOptionId(currentAnswer?.optionId ?? null);
-    }, [currentQuestion?.id, currentAnswer?.optionId]);
-
     // --- Action Handlers ---
     const handleStart = () => {
         dispatch(startExam(examData.time_limit));
