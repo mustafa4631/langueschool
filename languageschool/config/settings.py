@@ -155,7 +155,7 @@ DATABASES = {
 if DEBUG:
     FRONTEND_URL = "http://localhost:3000"
 else:
-    FRONTEND_URL = "https://alman-akademisi-frontend.vercel.app"
+    FRONTEND_URL = "https://almanakademisi.com"
 
 
 

@@ -832,9 +832,10 @@ class UnifiedOrderCreateAPIView(APIView):
         user_ip = request.META.get('REMOTE_ADDR', '127.0.0.1')
         user_basket = base64.b64encode(json.dumps(basket_items).encode()).decode()
 
+        test_mode = "1" if settings.DEBUG else "0"
         hash_str = (
-            merchant_id + user_ip + master_merchant_oid + user.email + 
-            str(payment_amount_total) + user_basket + "0" + "0" + "TRY" + "1" + merchant_salt
+            merchant_id + user_ip + master_merchant_oid + user.email +
+            str(payment_amount_total) + user_basket + "0" + "0" + "TRY" + test_mode + merchant_salt
         )
         paytr_token = base64.b64encode(
             hmac.new(merchant_key, hash_str.encode(), hashlib.sha256).digest()
@@ -847,6 +848,8 @@ class UnifiedOrderCreateAPIView(APIView):
             formatted_address = f"{addr.get('address_title', 'Adres')}: {addr.get('neighborhood', '')} Mah. {addr.get('full_address', '')} {addr.get('district', '')}/{addr.get('city', '')}"
         else:
             formatted_address = "Adres Bilgisi Bulunamadi"
+            
+        test_mode = "1" if settings.DEBUG else "0"
 
         payload = {
             'merchant_id': merchant_id,
@@ -859,11 +862,11 @@ class UnifiedOrderCreateAPIView(APIView):
             'user_name': f"{user.first_name} {user.last_name}",
             'user_address': formatted_address,
             'user_phone': user_phone,
-            'merchant_ok_url': "http://localhost:3000/payment-success",
-            'merchant_fail_url': "http://localhost:3000/payment-failed",
+            'merchant_ok_url': f"{settings.FRONTEND_URL}/payment-success",
+            'merchant_fail_url': f"{settings.FRONTEND_URL}/payment-failed",
             'currency': 'TRY',
-            'test_mode': 0,
-            'debug_on': 0,
+            'test_mode': int(test_mode),
+            'debug_on': 1 if settings.DEBUG else 0,
             'timeout_limit': 30,
             'lang': 'tr',
             'no_installment': 0,
