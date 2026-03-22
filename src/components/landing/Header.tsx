@@ -162,15 +162,15 @@ export function Header({ logoSrc = "/logo.webp" }: HeaderProps) {
                         <img
                             src={logoSrc}
                             alt="Alman Akademisi Logo"
-                            className="h-24 w-auto object-contain"
+                            className="h-16 w-auto object-contain"
                         />
                     ) : (
                         <Image
                             src={logoSrc}
                             alt="Alman Akademisi Logo"
-                            width={180}
-                            height={90}
-                            className="h-24 w-auto object-contain"
+                            width={140}
+                            height={70}
+                            className="h-16 w-auto object-contain"
                             priority
                         />
                     )}
