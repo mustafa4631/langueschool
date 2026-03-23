@@ -1,0 +1,394 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { Loader2, UploadCloud, Plus, X } from "lucide-react";
+import { toast } from "react-hot-toast";
+
+import { Sidebar } from "@/components/dashboard/Sidebar";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { Button } from "@/components/ui/button";
+import {
+    useCreateCourseGalleryMutation,
+    useUploadImageMutation,
+} from "@/lib/features/blog/blogApi";
+
+type UploadedImage = {
+    image_url: string;
+    image_public_id: string;
+};
+
+type ApiUploadResponse = {
+    results?: Array<{
+        url?: string;
+        public_id?: string;
+    }>;
+};
+
+type ErrorPayload = {
+    status?: string | number;
+    originalStatus?: number;
+    data?: {
+        status?: number;
+        message?: string;
+        detail?: string;
+        errors?: Record<string, string[]>;
+    } | string | unknown;
+};
+
+const extractErrorMessage = (payload: ErrorPayload["data"]) => {
+    if (!payload) return "";
+    if (typeof payload === "string") return payload;
+
+    if (typeof payload !== "object") return "";
+
+    const payloadRecord = payload as {
+        detail?: unknown;
+        message?: unknown;
+        errors?: unknown;
+    };
+
+    if (typeof payloadRecord.detail === "string") return payloadRecord.detail;
+    if (typeof payloadRecord.message === "string") return payloadRecord.message;
+
+    if (payloadRecord.errors && typeof payloadRecord.errors === "object") {
+        const errorsRecord = payloadRecord.errors as Record<string, unknown>;
+        const firstKey = Object.keys(errorsRecord)[0];
+        const firstValue = firstKey ? errorsRecord[firstKey] : undefined;
+        const firstMessage = Array.isArray(firstValue) && typeof firstValue[0] === "string" ? firstValue[0] : "";
+        return firstMessage || "";
+    }
+
+    return "";
+};
+
+const extractCreatedResponse = (payload: ErrorPayload["data"]) => {
+    if (!payload) return null;
+
+    if (typeof payload === "string") {
+        try {
+            const parsed = JSON.parse(payload) as { status?: number; message?: string };
+            const statusCode = Number(parsed.status);
+            if ([200, 201].includes(statusCode)) {
+                return {
+                    status: statusCode,
+                    message: parsed.message || "Bannerlar başarıyla kaydedildi.",
+                };
+            }
+        } catch {
+            return null;
+        }
+    }
+
+    if (typeof payload === "object") {
+        const payloadRecord = payload as { status?: unknown; message?: unknown };
+        const statusCode = Number(payloadRecord.status);
+        if ([200, 201].includes(statusCode)) {
+            return {
+                status: statusCode,
+                message:
+                    typeof payloadRecord.message === "string"
+                        ? payloadRecord.message
+                        : "Bannerlar başarıyla kaydedildi.",
+            };
+        }
+        return null;
+    }
+
+    return null;
+};
+
+const parseStatusCode = (value: unknown) => {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+        const match = value.match(/\d{3}/);
+        if (match) return Number(match[0]);
+    }
+    return NaN;
+};
+
+export default function CreateCoursesBannersPage() {
+    const router = useRouter();
+    const { isAuthorized, profile, isLoading: isAuthLoading } = useAuthGuard("admin");
+
+    const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
+    const [isDragActive, setIsDragActive] = useState(false);
+    const [isProcessingFiles, setIsProcessingFiles] = useState(false);
+
+    const [uploadImage, { isLoading: isUploadingImage }] = useUploadImageMutation();
+    const [createCourseGallery, { isLoading: isCreating }] = useCreateCourseGalleryMutation();
+
+    const isBusy = useMemo(
+        () => isUploadingImage || isCreating || isProcessingFiles,
+        [isUploadingImage, isCreating, isProcessingFiles]
+    );
+
+    const processFiles = async (files: File[]) => {
+        if (files.length === 0) return;
+
+        setIsProcessingFiles(true);
+        const uploadedBatch: UploadedImage[] = [];
+
+        for (const file of files) {
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error(`${file.name}: Maksimum dosya boyutu 5MB olmalıdır.`);
+                continue;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const uploadResponse = (await uploadImage(formData).unwrap()) as ApiUploadResponse;
+                const uploadedFile = uploadResponse?.results?.[0];
+
+                if (!uploadedFile?.url || !uploadedFile?.public_id) {
+                    throw new Error("Cloudinary yanıtı eksik.");
+                }
+
+                uploadedBatch.push({
+                    image_url: uploadedFile.url,
+                    image_public_id: uploadedFile.public_id,
+                });
+            } catch {
+                toast.error(`${file.name}: Görsel yüklenemedi.`);
+            }
+        }
+
+        if (uploadedBatch.length > 0) {
+            setUploadedImages((prev) => [...prev, ...uploadedBatch]);
+            toast.success(`${uploadedBatch.length} banner görseli yüklendi.`);
+        }
+
+        setIsProcessingFiles(false);
+    };
+
+    const handleFileInputChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files ? Array.from(event.target.files) : [];
+        await processFiles(files);
+        event.target.value = "";
+    };
+
+    const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDragActive(false);
+
+        const files = event.dataTransfer.files ? Array.from(event.dataTransfer.files) : [];
+        await processFiles(files);
+    };
+
+    const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDragActive(true);
+    };
+
+    const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDragActive(false);
+    };
+
+    const handleRemoveImage = (publicId: string) => {
+        setUploadedImages((prev) => prev.filter((image) => image.image_public_id !== publicId));
+    };
+
+    const handleSubmit = async () => {
+        if (uploadedImages.length === 0) {
+            toast.error("Lütfen en az bir banner görseli yükleyin.");
+            return;
+        }
+
+        try {
+            const result = await createCourseGallery({ images: uploadedImages });
+
+            if ("data" in result && result.data) {
+                const successData = result.data as { message?: string };
+                toast.success(successData?.message || "Bannerlar başarıyla kaydedildi.");
+                router.push("/dashboard/courses-banners");
+                return;
+            }
+
+            const errorPayload = ("error" in result ? result.error : null) as ErrorPayload | null;
+            if (!errorPayload) {
+                toast.error("Bannerlar kaydedilirken bir hata oluştu.");
+                return;
+            }
+
+            const originalStatus = parseStatusCode(errorPayload?.originalStatus);
+            const errorStatus = parseStatusCode(errorPayload?.status);
+            const rawErrorData =
+                typeof errorPayload?.data === "string"
+                    ? errorPayload.data
+                    : JSON.stringify(errorPayload?.data ?? "");
+            const isParsingSuccess =
+                errorPayload?.status === "PARSING_ERROR" &&
+                (originalStatus >= 200 && originalStatus < 300 ||
+                    /"status"\s*:\s*20\d/.test(rawErrorData) ||
+                    /success|updated successfully|created successfully/i.test(rawErrorData));
+
+            if (isParsingSuccess) {
+                const createdResponse = extractCreatedResponse(errorPayload?.data);
+                toast.success(createdResponse?.message || "Bannerlar başarıyla kaydedildi.");
+                router.push("/dashboard/courses-banners");
+                return;
+            }
+
+            const createdResponse = extractCreatedResponse(errorPayload?.data);
+            if (createdResponse) {
+                toast.success(createdResponse.message);
+                router.push("/dashboard/courses-banners");
+                return;
+            }
+
+            if (!Number.isNaN(errorStatus) && errorStatus >= 200 && errorStatus < 300) {
+                toast.success("Bannerlar başarıyla kaydedildi.");
+                router.push("/dashboard/courses-banners");
+                return;
+            }
+
+            const backendMessage = extractErrorMessage(errorPayload?.data);
+            toast.error(backendMessage || "Bannerlar kaydedilirken bir hata oluştu.");
+        } catch (error) {
+            const backendMessage = extractErrorMessage((error as ErrorPayload)?.data);
+            toast.error(backendMessage || "Bannerlar kaydedilirken bir hata oluştu.");
+        }
+    };
+
+    if (isAuthLoading || (!isAuthorized && typeof window !== "undefined")) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-[#F8FAFC]">
+                <Loader2 className="h-8 w-8 animate-spin text-[#1A3EB1]" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex min-h-screen bg-[#F8FAFC]">
+            <Sidebar
+                firstName={profile?.first_name || ""}
+                lastName={profile?.last_name || ""}
+                username={profile?.username || ""}
+            />
+
+            <main className="flex-1 lg:ml-72 min-w-0 pb-24">
+                <div className="p-4 sm:p-8 max-w-[1200px] mx-auto space-y-6">
+                    <div className="space-y-4">
+                        <div className="flex items-center text-sm text-slate-500">
+                            <span
+                                className="hover:text-slate-900 cursor-pointer"
+                                onClick={() => router.push("/dashboard/courses-banners")}
+                            >
+                                Kurs Bannerları
+                            </span>
+                            <span className="mx-2">›</span>
+                            <span className="font-medium text-slate-900">Yeni Banner Ekle</span>
+                        </div>
+
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="p-6 border-b border-slate-100">
+                                <h1 className="text-2xl font-bold text-slate-900">Kurs Banner Oluştur</h1>
+                                <p className="text-slate-500 mt-1">
+                                    Birden fazla banner yükleyebilir, önizleyebilir ve tek seferde kaydedebilirsiniz.
+                                </p>
+                            </div>
+
+                            <div className="p-6 space-y-6">
+                                <div
+                                    className={`relative rounded-xl border-2 border-dashed px-6 py-12 text-center transition-colors ${
+                                        isDragActive
+                                            ? "border-[#1A3EB1] bg-blue-50/40"
+                                            : "border-slate-200 bg-slate-50 hover:border-[#1A3EB1]"
+                                    }`}
+                                    onDrop={handleDrop}
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                >
+                                    <input
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/webp"
+                                        multiple
+                                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                                        onChange={handleFileInputChange}
+                                        disabled={isBusy}
+                                    />
+
+                                    <div className="flex flex-col items-center gap-2">
+                                        {isBusy ? (
+                                            <>
+                                                <Loader2 className="h-8 w-8 animate-spin text-[#1A3EB1]" />
+                                                <span className="text-sm text-slate-600">Görseller yükleniyor...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <UploadCloud className="h-8 w-8 text-[#1A3EB1]" />
+                                                <span className="text-sm font-medium text-slate-700">
+                                                    Görselleri sürükleyip bırakın veya seçmek için tıklayın
+                                                </span>
+                                                <span className="text-xs text-slate-500">
+                                                    JPG, PNG, WEBP (Maksimum 5MB / dosya)
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {uploadedImages.length > 0 && (
+                                    <div className="space-y-3">
+                                        <h2 className="text-sm font-semibold text-slate-700">Yüklenen Bannerlar</h2>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                            {uploadedImages.map((image, index) => (
+                                                <div
+                                                    key={`${image.image_public_id}-${index}`}
+                                                    className="group relative h-28 overflow-hidden rounded-xl border border-slate-200 bg-white"
+                                                >
+                                                    <Image
+                                                        src={image.image_url}
+                                                        alt="Banner önizleme"
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveImage(image.image_public_id)}
+                                                        className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                                                        aria-label="Görseli kaldır"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="pt-6 border-t border-slate-100 flex justify-end">
+                                    <Button
+                                        type="button"
+                                        onClick={handleSubmit}
+                                        disabled={isBusy || uploadedImages.length === 0}
+                                        className="bg-[#1A3EB1] hover:bg-[#15308A] text-white shadow-sm flex items-center gap-2 px-6 h-11 rounded-lg font-medium transition-all"
+                                    >
+                                        {isCreating ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                <span>Kaydediliyor...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Plus className="h-4 w-4" />
+                                                <span>Bannerları Kaydet</span>
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    );
+}

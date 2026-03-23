@@ -1,0 +1,32 @@
+import { HeroSection } from "@/components/landing/HeroSection";
+import { CourseScheduleSection } from "@/components/landing/CourseScheduleSection";
+import { StudentCertificatesSlider } from "@/components/landing/StudentCertificatesSlider";
+import { ModernPartnerLogosSection } from "@/components/landing/ModernPartnerLogosSection";
+import { StudentReviewsVideoSection } from "@/components/landing/StudentReviewsVideoSection";
+import { ReviewsSection } from "@/components/landing/ReviewsSection";
+import { WhyUsSection } from "@/components/landing/WhyUsSection";
+import { CallToActionSection } from "@/components/landing/CallToActionSection";
+
+export default function Home() {
+  const faceToFaceCoursePage = {
+    title: "Yüz Yüze Almanca Kursu",
+    href: "/yuz-yuze-almanca-kursu",
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen bg-slate-50 font-sans">
+      <main className="flex-1">
+        <HeroSection />
+        <CourseScheduleSection faceToFaceCoursePage={faceToFaceCoursePage} />
+        <StudentCertificatesSlider />
+        <ModernPartnerLogosSection />
+
+        <StudentReviewsVideoSection />
+        <ReviewsSection />
+        <WhyUsSection />
+        <CallToActionSection />
+      </main>
+    </div>
+  );
+}
+
