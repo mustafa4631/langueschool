@@ -154,9 +154,32 @@ export default function LoginPage() {
             const profileResult = await fetchProfileWithToken(response.access);
             handleLoginSuccess(response, profileResult);
         } catch (error: any) {
-            console.error("Login Error:", error);
-            // Default error message, you can map different status codes if needed
-            toast.error(error?.data?.detail || "Kullanıcı adı veya şifre hatalı.");
+            console.error("Login Error Full:", error);
+            
+            // Extract error message from backend response
+            let errorMessage = "Kullanıcı adı veya şifre hatalı.";
+            
+            if (error?.data) {
+                if (typeof error.data === 'string') {
+                    errorMessage = error.data;
+                } else if (error.data.detail) {
+                    errorMessage = error.data.detail;
+                } else if (error.data.non_field_errors) {
+                    errorMessage = error.data.non_field_errors[0];
+                } else if (typeof error.data === 'object') {
+                    // Get first error message from object values if it's a map of field errors
+                    const firstError = Object.values(error.data)[0];
+                    if (Array.isArray(firstError)) {
+                        errorMessage = firstError[0];
+                    } else if (typeof firstError === 'string') {
+                        errorMessage = firstError;
+                    }
+                }
+            } else if (error?.status === 'FETCH_ERROR') {
+                errorMessage = "Sunucuya bağlanılamadı. Lütfen internet bağlantınızı veya sunucu durumunu kontrol edin.";
+            }
+
+            toast.error(errorMessage);
         }
     };
 

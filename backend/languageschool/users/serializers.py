@@ -49,7 +49,7 @@ class LoginSerializer(serializers.Serializer):
 
         if identifier and password:
             try:
-                user_obj = Users.objects.get(Q(username=identifier) | Q(email=identifier))
+                user_obj = Users.objects.get(Q(username__iexact=identifier) | Q(email__iexact=identifier))
                 user = authenticate(username=user_obj.username, password=password)
             except Users.DoesNotExist:
                 user = None
