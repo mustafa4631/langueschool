@@ -34,7 +34,8 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-default-key")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes", "on")
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+ALLOWED_HOSTS = [x.strip() for x in os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if x.strip()]
+
 
 
 # Application definition
@@ -117,9 +118,12 @@ REST_FRAMEWORK = {
     ),
 }
 
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+CORS_ALLOWED_ORIGINS = [x.strip() for x in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if x.strip()]
 
-CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+CSRF_TRUSTED_ORIGINS = [x.strip() for x in os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if x.strip()]
+
+CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "False").lower() in ("1", "true", "yes", "on")
+
 
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
@@ -143,9 +147,10 @@ DATABASES = {
     }
 }
 if DEBUG:
-    FRONTEND_URL = "http://localhost:3000"
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 else:
-    FRONTEND_URL = "https://almanakademisi.com"
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "https://almanakademisi.com")
+
 
 
 
