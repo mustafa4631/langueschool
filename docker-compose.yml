@@ -24,9 +24,9 @@ services:
     container_name: langueschool_backend
     restart: always
     env_file:
-      - ./backend/.env
-    ports:
-      - "8000:8000"
+      - ./backend/languageschool/.env
+    expose:
+      - "8000"
     depends_on:
       db:
         condition: service_healthy
@@ -37,19 +37,33 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/}
     container_name: langueschool_frontend
     restart: always
     env_file:
       - ./frontend/.env
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     depends_on:
       - backend
     networks:
       - langueschool_net
 
+  proxy:
+    image: 'jc21/nginx-proxy-manager:latest'
+    container_name: langueschool_proxy
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    volumes:
+      - ./npm/data:/data
+      - ./npm/letsencrypt:/etc/letsencrypt
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - langueschool_net
 
 volumes:
   postgres_data:
