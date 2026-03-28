@@ -11,7 +11,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 # Install dependencies
 COPY package*.json ./
-RUN npm install --frozen-lockfile --include=dev
+RUN npm ci --include=dev
 
 # Build the application
 COPY . .
