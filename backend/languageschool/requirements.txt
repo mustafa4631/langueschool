@@ -15,3 +15,4 @@ urllib3==2.6.2
 gunicorn
 playwright==1.58.0
 requests==2.32.5
+whitenoise==6.8.2
