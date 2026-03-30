@@ -23,24 +23,27 @@ const footerNavList = "space-y-2 text-sm text-slate-600";
 
 export function Footer({ logoSrc = "/logo.webp" }: FooterProps) {
     const currentYear = new Date().getFullYear();
-    const developerLinkProps = {
-        href: "https://vizimagency.com",
-        target: "_blank",
-        rel: "noopener noreferrer",
-        className: "inline-flex items-center gap-2 text-slate-500 transition-colors hover:text-[#1e3a8a]",
-    } as const;
-
     const renderDeveloperCredit = () => (
-        <Link {...developerLinkProps} aria-label="Vizim Digital Agency">
-            <span className="font-medium">Developed by Vizim.</span>
-            <Image
-                src="/vizim.png"
-                alt="Vizim Digital Agency"
-                width={96}
-                height={24}
-                className="h-6 w-auto object-contain"
-            />
-        </Link>
+        <div className="flex items-center gap-2 text-slate-500">
+            <span className="font-medium">Developed by</span>
+            <Link
+                href="https://bionluk.com/mustafagokpinar4"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium transition-colors hover:text-[#1e3a8a] hover:underline"
+            >
+                Mustafa GÖKPINAR
+            </Link>
+            <Link
+                href="https://www.linkedin.com/in/mustafa-gokpinar/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:text-[#1e3a8a]"
+                aria-label="Mustafa GÖKPINAR LinkedIn"
+            >
+                <Linkedin className="h-4 w-4" />
+            </Link>
+        </div>
     );
 
     return (
